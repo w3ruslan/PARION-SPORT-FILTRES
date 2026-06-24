@@ -41,7 +41,7 @@
         .mono { font-family: 'SF Mono', 'Consolas', 'Courier New', monospace; }
 
         .wrapper {
-            max-width: 1450px;
+            max-width: 1550px;
             margin: auto;
             border: 1px solid var(--border);
             padding: 28px;
@@ -106,6 +106,8 @@
         button:active { transform: translateY(1px); }
         button.secondary { background: var(--gold); box-shadow: 0 2px 6px rgba(183, 121, 31, 0.25); }
         button.secondary:hover { background: #9c6717; }
+        button.copy { background: var(--hl-border); box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25); }
+        button.copy:hover { background: #6d28d9; }
 
         .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--panel-2); padding: 16px; border-radius: 10px; margin: 12px 0; border: 1px solid var(--border); }
         .filter-group { display: flex; flex-direction: column; gap: 6px; }
@@ -131,7 +133,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
+            gap: 10px;
             margin-bottom: 5px;
             border-radius: 8px;
             color: var(--text);
@@ -155,12 +157,17 @@
         }
 
         /* Sütunlar */
-        .col-teams  { flex: 2; min-width: 215px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
-        .col-score  { width: 46px; text-align: center; font-weight: 700; color: var(--gold); }
-        .col-goals  { flex: 1.5; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
-        .col-dna    { width: 165px; text-align: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0 8px; font-size: 11px; }
-        .col-odds   { width: 170px; text-align: right; font-weight: 600; color: var(--primary-dark); font-size: 11px; }
-        .col-status { width: 92px; text-align: center; }
+        .col-teams  { flex: 2; min-width: 200px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+        .col-score  { width: 42px; text-align: center; font-weight: 700; color: var(--gold); }
+        .col-goals  { flex: 1.2; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+        .col-dna    { width: 130px; text-align: center; border-left: 1px solid var(--border); padding: 0 6px; font-size: 11px; }
+        .col-goldna { width: 150px; text-align: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0 6px; font-size: 11px; }
+        .col-odds   { width: 155px; text-align: right; font-weight: 600; color: var(--primary-dark); font-size: 11px; }
+        .col-status { width: 80px; text-align: center; }
+
+        .gx-strong { color: var(--hl-border); font-weight: 700; }
+        .gx-mid    { color: var(--gold); font-weight: 600; }
+        .gx-weak   { color: var(--muted); }
 
         .status-badge {
             padding: 3px 8px;
@@ -200,6 +207,9 @@
         }
         .odds-sub-group { display: flex; flex-direction: column; gap: 4px; }
         .odds-sub-group label { font-size: 10px; color: var(--primary); text-align: center; font-weight: 600; text-transform: uppercase; }
+
+        .legend { font-size: 11px; color: var(--muted); margin-top: 10px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+        .legend b { color: var(--text); }
     </style>
 </head>
 <body>
@@ -258,8 +268,17 @@
             </div>
 
             <div class="filter-grid">
-                <div class="filter-group"><label>SIRALAMA MIN</label><input type="number" id="rank_min" value="1" min="1"></div>
-                <div class="filter-group"><label>SIRALAMA MAX</label><input type="number" id="rank_max" value="30" min="1"></div>
+                <div class="filter-group">
+                    <label>GOL-BERABERE FİLTRESİ (MİN %)</label>
+                    <input type="number" id="gx_min" value="0" min="0" max="100" step="1">
+                </div>
+                <div class="filter-group">
+                    <label>SIRALAMA MIN / MAX</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="number" id="rank_min" value="1" min="1" style="width:50%">
+                        <input type="number" id="rank_max" value="30" min="1" style="width:50%">
+                    </div>
+                </div>
             </div>
 
             <!-- GELİŞMİŞ ORAN FİLTRELERİ -->
@@ -282,6 +301,14 @@
             </div>
 
             <button class="secondary" onclick="renderList()">FİLTRELERİ UYGULA VE LİSTEYİ GÜNCELLE</button>
+            <button class="copy" onclick="copyResults()">📋 SONUÇLARI KOPYALA (CLAUDE'A GÖNDER)</button>
+
+            <div class="legend">
+                <b>O-DNA</b> = oran tabanlı tahmin (eski sistem) &nbsp;•&nbsp;
+                <b>BERABERE %</b> = sadece gol/sıralamadan Poisson beraberlik olasılığı &nbsp;•&nbsp;
+                <b>G-DNA</b> = gol tabanlı berabere puanı (0-10). Mor = güçlü berabere sinyali.
+            </div>
+
             <div id="stats" style="margin-top:20px;"></div>
             <div id="log"></div>
         </div>
@@ -292,6 +319,7 @@
 let allMatches = [];
 let teamSet = new Set();
 let leagueTable = {};
+let exportText = "";
 
 function ultraClean(text) {
     if (!text) return "";
@@ -303,6 +331,7 @@ function ultraClean(text) {
         .trim();
 }
 
+/* ===== ESKİ: ORAN TABANLI DNA (DEĞİŞMEDİ) ===== */
 function solveRadicalDNA(o1, ox, o2, hStats, aStats, hRank, aRank) {
     let diff = Math.abs(o1 - o2);
     let puan = 0;
@@ -320,6 +349,37 @@ function solveRadicalDNA(o1, ox, o2, hStats, aStats, hRank, aRank) {
     }
 
     return { decision: (puan >= 5 ? 'X' : (o1 < o2 ? '1' : '2')), puan: Math.min(puan, 10), diff };
+}
+
+/* ===== YENİ: GOL TABANLI BERABERE DNA (Poisson) ===== */
+function factorial(n) { let f = 1; for (let i = 2; i <= n; i++) f *= i; return f; }
+function poisson(k, lambda) { return Math.exp(-lambda) * Math.pow(lambda, k) / factorial(k); }
+function drawProbability(lh, la) {
+    let p = 0;
+    for (let k = 0; k <= 6; k++) { p += poisson(k, lh) * poisson(k, la); }
+    return p;
+}
+function solveGoalDNA(hStats, aStats) {
+    let hAG = parseFloat(hStats.avgGS) || 0, hYG = parseFloat(hStats.avgGC) || 0;
+    let aAG = parseFloat(aStats.avgGS) || 0, aYG = parseFloat(aStats.avgGC) || 0;
+    let hasData = (hStats.played > 0 && aStats.played > 0);
+
+    // Beklenen goller
+    let exH = (hAG + aYG) / 2;
+    let exA = (aAG + hYG) / 2;
+    let total = exH + exA;
+    let symDiff = Math.abs(exH - exA);
+    let rankDiff = Math.abs((hStats.rank || 0) - (aStats.rank || 0));
+
+    // 0-10 berabere puanı
+    let puan = 0;
+    if (rankDiff <= 2) puan += 3; else if (rankDiff <= 5) puan += 2; else if (rankDiff <= 8) puan += 1;
+    if (total <= 2.0) puan += 3; else if (total <= 2.5) puan += 2; else if (total <= 3.0) puan += 1;
+    if (symDiff <= 0.25) puan += 3; else if (symDiff <= 0.5) puan += 2; else if (symDiff <= 0.8) puan += 1;
+    if (hYG < 1.1 && aYG < 1.1) puan += 1;
+
+    let drawProb = drawProbability(exH, exA) * 100;
+    return { exH, exA, total, symDiff, puan: Math.min(puan, 10), drawProb, hasData };
 }
 
 function calculateStandings(matches) {
@@ -396,6 +456,12 @@ function superParse() {
     renderList();
 }
 
+function gxClass(prob) {
+    if (prob >= 33) return 'gx-strong';
+    if (prob >= 29) return 'gx-mid';
+    return 'gx-weak';
+}
+
 function renderList() {
     const log = document.getElementById('log'); log.innerHTML = "";
     const filterPred = document.getElementById('filter_prediction').value;
@@ -412,14 +478,17 @@ function renderList() {
 
     const r_min = parseInt(document.getElementById('rank_min').value) || 1;
     const r_max = parseInt(document.getElementById('rank_max').value) || 100;
+    const gx_min = parseFloat(document.getElementById('gx_min').value) || 0;
 
     let hits = 0, count = 0;
+    let exportLines = ["MAC | SKOR | ORANLAR(1/X/2) | O-DNA | BERABERE% | G-DNA | TAHMIN | SONUC"];
 
     allMatches.forEach(m => {
-        let hInfo = leagueTable[m.h] || {rank:0, avgGS:0, avgGC:0};
-        let aInfo = leagueTable[m.a] || {rank:0, avgGS:0, avgGC:0};
+        let hInfo = leagueTable[m.h] || {rank:0, avgGS:0, avgGC:0, played:0};
+        let aInfo = leagueTable[m.a] || {rank:0, avgGS:0, avgGC:0, played:0};
 
         let dna = solveRadicalDNA(m.od[0], m.od[1], m.od[2], hInfo, aInfo, hInfo.rank, aInfo.rank);
+        let gdna = solveGoalDNA(hInfo, aInfo);
 
         // SIRALAMA FİLTRESİ
         if (!m.fut && (hInfo.rank < r_min || hInfo.rank > r_max || aInfo.rank < r_min || aInfo.rank > r_max)) return;
@@ -429,6 +498,9 @@ function renderList() {
         if (m.od[1] < fx_min || m.od[1] > fx_max) return;
         if (m.od[2] < f2_min || m.od[2] > f2_max) return;
 
+        // GOL-BERABERE FİLTRESİ (min %)
+        if (gx_min > 0 && (!gdna.hasData || gdna.drawProb < gx_min)) return;
+
         if (filterPred !== "ALL" && dna.decision !== filterPred) return;
 
         let isCorrect = (dna.decision === m.r);
@@ -437,27 +509,57 @@ function renderList() {
         // ---- RENKLENDİRME MANTIĞI ----
         let rowClass, drawBorder = '';
         if (filterActual !== "ALL") {
-            // Gerçek sonuç vurgulama aktif: SADECE seçilen sonuç renklenir, diğerleri nötr (renksiz)
             rowClass = (!m.fut && m.r === filterActual) ? 'actual-highlight' : '';
         } else {
-            // Normal görünüm
             rowClass = m.fut ? 'future-match' : (filterFocus === "ALL" ? (isCorrect ? 'win' : 'loss') : (m.r === filterFocus ? 'win' : 'loss'));
             drawBorder = (dna.decision === 'X') ? 'draw-highlight' : '';
         }
 
         let statusText = m.fut ? 'GELECEK' : (filterFocus === "ALL" ? (isCorrect ? 'BAŞARILI' : 'HATALI') : (m.r === filterFocus ? 'HEDEF TUTTU' : 'HEDEF KAÇTI'));
 
+        // Gol-DNA gösterimi
+        let gxProbTxt = gdna.hasData ? '%' + gdna.drawProb.toFixed(0) : '-';
+        let gxPuanTxt = gdna.hasData ? gdna.puan + '/10' : '-';
+        let gxCls = gdna.hasData ? gxClass(gdna.drawProb) : 'gx-weak';
+
         log.innerHTML += `
             <div class="match-row ${rowClass} ${drawBorder}">
                 <div class="col-teams">${m.h} (#${hInfo.rank}) - ${m.a} (#${aInfo.rank})</div>
                 <div class="col-score mono">${m.sc==='PENDING'?'?':m.sc}</div>
                 <div class="col-goals">Ev V${hInfo.avgGS}/Y${hInfo.avgGC} · Dep V${aInfo.avgGS}/Y${aInfo.avgGC}</div>
-                <div class="col-dna">DNA ${dna.puan}/10 · T:<b>${dna.decision}</b> · S:<b>${m.r}</b></div>
+                <div class="col-dna">O-DNA ${dna.puan} · T:<b>${dna.decision}</b></div>
+                <div class="col-goldna"><span class="${gxCls}">BERABERE ${gxProbTxt}</span> · G:${gxPuanTxt}</div>
                 <div class="col-odds">1(${m.od[0]}) X(${m.od[1]}) 2(${m.od[2]})</div>
                 <div class="col-status"><span class="status-badge">${statusText}</span></div>
             </div>`;
+
+        // Kopyalama metni
+        exportLines.push(
+            `${m.h}(#${hInfo.rank})-${m.a}(#${aInfo.rank}) | ${m.sc==='PENDING'?'?':m.sc} | ${m.od[0]}/${m.od[1]}/${m.od[2]} | ${dna.puan}/10 T:${dna.decision} | ${gxProbTxt} | ${gxPuanTxt} | ${dna.decision} | ${m.r}`
+        );
     });
+
+    exportText = exportLines.join('\n');
     document.getElementById('stats').innerText = `DNA BAŞARI İSTATİSTİĞİ: %${count > 0 ? ((hits/count)*100).toFixed(1) : 0} (${hits}/${count})`;
+}
+
+function copyResults() {
+    if (!exportText) { alert('Önce "ANALİZ ET" butonuna basıp listeyi oluştur.'); return; }
+    const done = () => alert('✅ Kopyalandı! Artık Claude\'a (sohbete) yapıştırıp gönderebilirsin.');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(exportText).then(done).catch(fallbackCopy);
+    } else {
+        fallbackCopy();
+    }
+    function fallbackCopy() {
+        const ta = document.createElement('textarea');
+        ta.value = exportText;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch (e) { alert('Kopyalanamadı, metni elle seçip kopyala.'); }
+        document.body.removeChild(ta);
+    }
 }
 </script>
 </body>
