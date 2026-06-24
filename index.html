@@ -269,10 +269,17 @@
 
             <div class="filter-grid">
                 <div class="filter-group">
+                    <label style="color:#7c3aed;">★ MİN G-DNA PUANI (EDGE: 8 yaz)</label>
+                    <input type="number" id="g_min" value="0" min="0" max="10" step="1" style="border-color:#7c3aed;">
+                </div>
+                <div class="filter-group">
                     <label>GOL-BERABERE FİLTRESİ (MİN %)</label>
                     <input type="number" id="gx_min" value="0" min="0" max="100" step="1">
                 </div>
-                <div class="filter-group">
+            </div>
+
+            <div class="filter-grid">
+                <div class="filter-group" style="grid-column: span 2;">
                     <label>SIRALAMA MIN / MAX</label>
                     <div style="display:flex; gap:8px;">
                         <input type="number" id="rank_min" value="1" min="1" style="width:50%">
@@ -479,6 +486,7 @@ function renderList() {
     const r_min = parseInt(document.getElementById('rank_min').value) || 1;
     const r_max = parseInt(document.getElementById('rank_max').value) || 100;
     const gx_min = parseFloat(document.getElementById('gx_min').value) || 0;
+    const g_min = parseInt(document.getElementById('g_min').value) || 0;
 
     let hits = 0, count = 0;
     let exportLines = ["MAC | SKOR | ORANLAR(1/X/2) | O-DNA | BERABERE% | G-DNA | TAHMIN | SONUC"];
@@ -500,6 +508,9 @@ function renderList() {
 
         // GOL-BERABERE FİLTRESİ (min %)
         if (gx_min > 0 && (!gdna.hasData || gdna.drawProb < gx_min)) return;
+
+        // MİN G-DNA PUANI FİLTRESİ (edge bölgesi: 8+)
+        if (g_min > 0 && (!gdna.hasData || gdna.puan < g_min)) return;
 
         if (filterPred !== "ALL" && dna.decision !== filterPred) return;
 
