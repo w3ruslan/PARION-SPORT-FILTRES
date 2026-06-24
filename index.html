@@ -319,6 +319,18 @@
             <div id="stats" style="margin-top:20px;"></div>
             <div id="log"></div>
         </div>
+
+        <!-- TAHMIN DEFTERI (FORWARD-TEST) -->
+        <div class="card">
+            <h3>📓 TAHMİN DEFTERİ (FORWARD-TEST)</h3>
+            <div class="legend" style="margin-top:0;">
+                Önce <b>★ MİN G-DNA = 8</b> yapıp filtrele. Sonra aşağıdaki butonla görünen maçları <b>X tahmini</b> olarak deftere ekle (para yatırma!). Maçlar oynanınca <b>✓/✗</b> ile sonucu işaretle — isabet ve ROI otomatik hesaplanır. Veriler tarayıcında kalıcı saklanır.
+            </div>
+            <button class="copy" onclick="addDisplayedToLedger()">➕ GÖRÜNEN MAÇLARI DEFTERE EKLE (X olarak)</button>
+            <div id="ledgerStats" style="margin-top:15px;"></div>
+            <div id="ledger" style="max-height:500px; overflow-y:auto; margin-top:10px;"></div>
+            <button onclick="clearLedger()" style="background:#dc3b2e; box-shadow:0 2px 6px rgba(220,59,46,0.25); margin-top:10px;">🗑️ DEFTERİ TEMİZLE</button>
+        </div>
     </div>
 </div>
 
@@ -327,6 +339,8 @@ let allMatches = [];
 let teamSet = new Set();
 let leagueTable = {};
 let exportText = "";
+let displayedMatches = [];
+let ledger = JSON.parse(localStorage.getItem('parion_ledger') || '[]');
 
 function ultraClean(text) {
     if (!text) return "";
@@ -471,6 +485,7 @@ function gxClass(prob) {
 
 function renderList() {
     const log = document.getElementById('log'); log.innerHTML = "";
+    displayedMatches = [];
     const filterPred = document.getElementById('filter_prediction').value;
     const filterActual = document.getElementById('filter_actual').value;
     const filterFocus = document.getElementById('filter_focus').value;
@@ -558,6 +573,9 @@ function renderList() {
         exportLines.push(
             `${m.h}(#${hInfo.rank})-${m.a}(#${aInfo.rank}) | ${m.sc==='PENDING'?'?':m.sc} | ${m.od[0]}/${m.od[1]}/${m.od[2]} | ${dna.puan}/10 T:${dna.decision} | ${gxProbTxt} | ${gxPuanTxt} | ${dna.decision} | ${m.r}`
         );
+
+        // Forward-test için görünen maçları sakla
+        displayedMatches.push({ match: `${m.h} - ${m.a}`, xOdd: m.od[1], gPuan: gdna.hasData ? gdna.puan : null });
     });
 
     exportText = exportLines.join('\n');
@@ -582,6 +600,71 @@ function copyResults() {
         document.body.removeChild(ta);
     }
 }
+
+/* ===== TAHMİN DEFTERİ (FORWARD-TEST, localStorage) ===== */
+function saveLedger() { localStorage.setItem('parion_ledger', JSON.stringify(ledger)); }
+
+function addDisplayedToLedger() {
+    if (!displayedMatches.length) { alert('Önce maçları listele (Analiz Et + Filtrele).'); return; }
+    let added = 0;
+    displayedMatches.forEach(d => {
+        let key = d.match + '|' + d.xOdd;
+        if (ledger.some(e => e.key === key)) return; // tekrar ekleme
+        ledger.push({ key, match: d.match, odd: d.xOdd, gPuan: d.gPuan, pick: 'X', result: 'pending', date: new Date().toISOString().slice(0,10) });
+        added++;
+    });
+    saveLedger(); renderLedger();
+    alert(added + ' maç deftere eklendi (X tahmini). Toplam: ' + ledger.length);
+}
+
+function markResult(idx, res) { ledger[idx].result = res; saveLedger(); renderLedger(); }
+function deleteEntry(idx) { ledger.splice(idx, 1); saveLedger(); renderLedger(); }
+function clearLedger() {
+    if (!ledger.length) return;
+    if (confirm('Tüm defter silinsin mi? (' + ledger.length + ' kayıt)')) { ledger = []; saveLedger(); renderLedger(); }
+}
+
+function renderLedger() {
+    const box = document.getElementById('ledger');
+    const stats = document.getElementById('ledgerStats');
+    if (!box) return;
+    if (!ledger.length) { box.innerHTML = '<div style="color:var(--muted); padding:10px;">Defter boş. Yukarıdan maç ekle.</div>'; stats.innerHTML = ''; return; }
+
+    let bets = 0, hits = 0, staked = 0, ret = 0, pending = 0;
+    ledger.forEach(e => {
+        if (e.result === 'pending') { pending++; return; }
+        bets++; staked += 1;
+        if (e.result === 'win') { hits++; ret += e.odd; }
+    });
+    let roi = bets ? ((ret - staked) / staked * 100) : 0;
+    let hitPct = bets ? (hits / bets * 100) : 0;
+    stats.innerHTML =
+        `<div style="background:var(--panel-3); border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center; font-weight:600;">
+            Sonuçlanan: <b>${bets}</b> &nbsp;|&nbsp; Tutan: <b style="color:var(--win-border)">${hits}</b> &nbsp;|&nbsp; İsabet: <b>%${hitPct.toFixed(1)}</b><br>
+            ROI: <b style="color:${roi>=0?'var(--win-border)':'var(--loss-border)'}; font-size:1.2em;">%${roi.toFixed(1)}</b> &nbsp;|&nbsp; Bekleyen: ${pending}
+        </div>`;
+
+    let html = '';
+    ledger.forEach((e, i) => {
+        let bg = e.result === 'win' ? 'var(--win-bg)' : (e.result === 'loss' ? 'var(--loss-bg)' : 'var(--panel)');
+        let badge = e.result === 'win' ? '✓ TUTTU' : (e.result === 'loss' ? '✗ KAÇTI' : 'BEKLİYOR');
+        html += `
+        <div class="match-row" style="background:${bg};">
+            <div class="col-teams">${e.match} <span style="color:var(--muted); font-weight:400;">(G:${e.gPuan ?? '-'} · ${e.date})</span></div>
+            <div class="col-odds">X oranı: ${e.odd}</div>
+            <div class="col-status"><span class="status-badge">${badge}</span></div>
+            <div style="display:flex; gap:4px;">
+                <button onclick="markResult(${i},'win')" style="width:auto; padding:4px 8px; margin:0; background:var(--win-border); font-size:11px;">✓</button>
+                <button onclick="markResult(${i},'loss')" style="width:auto; padding:4px 8px; margin:0; background:var(--loss-border); font-size:11px;">✗</button>
+                <button onclick="markResult(${i},'pending')" style="width:auto; padding:4px 8px; margin:0; background:var(--muted); font-size:11px;">↺</button>
+                <button onclick="deleteEntry(${i})" style="width:auto; padding:4px 8px; margin:0; background:#888; font-size:11px;">🗑</button>
+            </div>
+        </div>`;
+    });
+    box.innerHTML = html;
+}
+
+renderLedger();
 </script>
 </body>
 </html>
