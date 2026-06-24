@@ -310,6 +310,18 @@
             <button class="secondary" onclick="renderList()">FİLTRELERİ UYGULA VE LİSTEYİ GÜNCELLE</button>
             <button class="copy" onclick="copyResults()">📋 SONUÇLARI KOPYALA (CLAUDE'A GÖNDER)</button>
 
+            <div class="filter-grid" style="border-color:#7c3aed; align-items:end;">
+                <div class="filter-group">
+                    <label style="color:#7c3aed;">🎯 EDGE KURALI: G-DNA ≥</label>
+                    <input type="number" id="edge_g" value="8" min="0" max="10" step="1" style="border-color:#7c3aed;">
+                </div>
+                <div class="filter-group">
+                    <label style="color:#7c3aed;">VE X ORANI <</label>
+                    <input type="number" id="edge_x" value="3.3" min="1" max="99" step="0.1" style="border-color:#7c3aed;">
+                </div>
+                <button id="edgeBtn" onclick="toggleEdge()" style="grid-column: span 2; background:#7c3aed; box-shadow:0 2px 6px rgba(124,58,237,0.3);">🎯 EDGE MODU: KAPALI (vurgula — gizleme yok)</button>
+            </div>
+
             <div class="legend">
                 <b>O-DNA</b> = oran tabanlı tahmin (eski sistem) &nbsp;•&nbsp;
                 <b>BERABERE %</b> = sadece gol/sıralamadan Poisson beraberlik olasılığı &nbsp;•&nbsp;
@@ -340,7 +352,21 @@ let teamSet = new Set();
 let leagueTable = {};
 let exportText = "";
 let displayedMatches = [];
+let edgeMode = false;
 let ledger = JSON.parse(localStorage.getItem('parion_ledger') || '[]');
+
+function toggleEdge() {
+    edgeMode = !edgeMode;
+    const btn = document.getElementById('edgeBtn');
+    if (edgeMode) {
+        btn.textContent = '🎯 EDGE MODU: AÇIK (öneri tuttu=yeşil, kaçtı=kırmızı)';
+        btn.style.background = '#16a34a';
+    } else {
+        btn.textContent = '🎯 EDGE MODU: KAPALI (vurgula — gizleme yok)';
+        btn.style.background = '#7c3aed';
+    }
+    renderList();
+}
 
 function ultraClean(text) {
     if (!text) return "";
@@ -489,6 +515,9 @@ function renderList() {
     const filterPred = document.getElementById('filter_prediction').value;
     const filterActual = document.getElementById('filter_actual').value;
     const filterFocus = document.getElementById('filter_focus').value;
+    const edge_g = parseInt(document.getElementById('edge_g').value) || 8;
+    const edge_x = parseFloat(document.getElementById('edge_x').value) || 3.3;
+    let edgeBets = 0, edgeHits = 0, edgeRet = 0, edgeFut = 0;
 
     // ORAN FİLTRELERİ
     const f1_min = parseFloat(document.getElementById('f1_min').value) || 0;
@@ -534,7 +563,15 @@ function renderList() {
 
         // ---- RENKLENDİRME MANTIĞI ----
         let rowClass = '', drawBorder = '', statusText;
-        if (filterActual !== "ALL") {
+        if (edgeMode) {
+            // EDGE MODU: sadece kurala uyan öneriler renklenir, diğerleri nötr (gizleme yok)
+            let isEdge = gdna.hasData && gdna.puan >= edge_g && m.od[1] < edge_x;
+            if (isEdge && m.fut) { rowClass = 'future-match'; statusText = 'ÖNERİ (X)'; edgeFut++; }
+            else if (isEdge) {
+                if (m.r === 'X') { rowClass = 'win'; statusText = 'TUTTU'; edgeBets++; edgeHits++; edgeRet += m.od[1]; }
+                else { rowClass = 'loss'; statusText = 'KAÇTI'; edgeBets++; }
+            } else { rowClass = ''; statusText = m.fut ? 'GELECEK' : '-'; }
+        } else if (filterActual !== "ALL") {
             // GERÇEK SONUÇ VURGULA: sadece seçilen sonuç renklenir, diğerleri nötr
             rowClass = (!m.fut && m.r === filterActual) ? 'actual-highlight' : '';
             statusText = m.fut ? 'GELECEK' : (m.r === filterActual ? 'VURGU' : '-');
@@ -579,7 +616,14 @@ function renderList() {
     });
 
     exportText = exportLines.join('\n');
-    document.getElementById('stats').innerText = `DNA BAŞARI İSTATİSTİĞİ: %${count > 0 ? ((hits/count)*100).toFixed(1) : 0} (${hits}/${count})`;
+    if (edgeMode) {
+        let eroi = edgeBets ? ((edgeRet - edgeBets) / edgeBets * 100) : 0;
+        let ehit = edgeBets ? (edgeHits / edgeBets * 100) : 0;
+        document.getElementById('stats').innerText =
+            `🎯 EDGE (G≥${edge_g} & X<${edge_x}) → Geçmiş öneri: ${edgeBets} | Tutan: ${edgeHits} | İsabet: %${ehit.toFixed(1)} | ROI: %${eroi.toFixed(1)}  ||  Bekleyen (gelecek) öneri: ${edgeFut}`;
+    } else {
+        document.getElementById('stats').innerText = `DNA BAŞARI İSTATİSTİĞİ: %${count > 0 ? ((hits/count)*100).toFixed(1) : 0} (${hits}/${count})`;
+    }
 }
 
 function copyResults() {
