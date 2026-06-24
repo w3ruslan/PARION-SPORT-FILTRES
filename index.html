@@ -507,15 +507,25 @@ function renderList() {
         if(!m.fut) { count++; if(isCorrect) hits++; }
 
         // ---- RENKLENDİRME MANTIĞI ----
-        let rowClass, drawBorder = '';
+        let rowClass = '', drawBorder = '', statusText;
         if (filterActual !== "ALL") {
+            // GERÇEK SONUÇ VURGULA: sadece seçilen sonuç renklenir, diğerleri nötr
             rowClass = (!m.fut && m.r === filterActual) ? 'actual-highlight' : '';
-        } else {
-            rowClass = m.fut ? 'future-match' : (filterFocus === "ALL" ? (isCorrect ? 'win' : 'loss') : (m.r === filterFocus ? 'win' : 'loss'));
+            statusText = m.fut ? 'GELECEK' : (m.r === filterActual ? 'VURGU' : '-');
+        } else if (m.fut) {
+            rowClass = 'future-match';
+            statusText = 'GELECEK';
+        } else if (filterFocus === "ALL") {
+            // Normal DNA odaklı görünüm
+            rowClass = isCorrect ? 'win' : 'loss';
             drawBorder = (dna.decision === 'X') ? 'draw-highlight' : '';
+            statusText = isCorrect ? 'BAŞARILI' : 'HATALI';
+        } else {
+            // SONUÇ VURGULAMA (ODAK): seçilen sonuç = filterFocus
+            if (m.r === filterFocus) { rowClass = 'win'; statusText = 'TUTTU'; }                 // o sonuçla bitti -> yeşil
+            else if (dna.decision === filterFocus) { rowClass = 'loss'; statusText = 'DNA YANLIŞ'; } // DNA önerdi ama tutmadı -> kırmızı
+            else { rowClass = ''; statusText = '-'; }                                              // diğerleri -> vurgusuz
         }
-
-        let statusText = m.fut ? 'GELECEK' : (filterFocus === "ALL" ? (isCorrect ? 'BAŞARILI' : 'HATALI') : (m.r === filterFocus ? 'HEDEF TUTTU' : 'HEDEF KAÇTI'));
 
         // Gol-DNA gösterimi
         let gxProbTxt = gdna.hasData ? '%' + gdna.drawProb.toFixed(0) : '-';
