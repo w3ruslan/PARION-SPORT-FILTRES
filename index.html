@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enfibonacci v27.4 - Ultra Kompakt Tek Satır</title>
+    <title>Enfibonacci v27.2 - Geniş Analiz Paneli</title>
     <style>
         /* Matrix / Terminal Teması - Gurbet Özel */
         body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #00ff41; padding: 20px; margin: 0; }
-        .wrapper { max-width: 1450px; margin: auto; border: 2px solid #00ff41; padding: 20px; background: #111; box-shadow: 0 0 30px #00ff4122; border-radius: 8px; }
+        .wrapper { max-width: 1400px; margin: auto; border: 2px solid #00ff41; padding: 20px; background: #111; box-shadow: 0 0 30px #00ff4122; border-radius: 8px; }
 
         .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
         textarea { width: 100%; height: 160px; background: #000; color: #00ff41; border: 1px solid #00ff41; padding: 10px; font-size: 12px; border-radius: 4px; box-sizing: border-box; resize: vertical; }
 
+        /* Grid tek sütun yapıldı (Ferah görünüm için) */
         .grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 20px; }
-        .card { background: #050505; border: 1px solid #333; padding: 20px; border-radius: 8px; }
 
+        .card { background: #050505; border: 1px solid #333; padding: 20px; border-radius: 8px; }
         button { background: #00ff41; color: #000; border: none; padding: 15px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1em; margin-top: 10px; text-transform: uppercase; border-radius: 4px; box-shadow: 0 4px #008800; }
         button:active { box-shadow: 0 0 #008800; transform: translateY(4px); }
         button:hover { background: #00cc00; box-shadow: 0 0 15px #00ff41; }
@@ -23,132 +24,123 @@
         .filter-group { display: flex; flex-direction: column; gap: 5px; }
         .filter-group label { font-size: 10px; color: #f1c40f; text-transform: uppercase; }
 
-        /* TEK SATIR MATCH-ROW TASARIMI */
-        .match-row {
-            border-bottom: 1px solid #222;
-            padding: 5px 10px;
-            font-size: 11px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: 0.2s;
-            margin-bottom: 2px;
-            border-radius: 3px;
-            color: #fff;
-            border-left: 4px solid transparent;
-            gap: 10px;
-            white-space: nowrap;
-        }
+        .match-row { border: 1px solid #222; padding: 12px; font-size: 13px; display: flex; flex-direction: column; transition: 0.3s; margin-bottom: 8px; border-radius: 4px; color: #fff; border-left: 8px solid transparent; }
 
-        .future-match { background: #00d4ff !important; color: #000 !important; border-left: 8px solid #000 !important; font-weight: bold; }
-        .future-match * { color: #000 !important; }
+        .future-match { background: #00d4ff !important; color: #000 !important; border: 2px solid #fff; font-weight: bold; border-left: 12px solid #000 !important; }
+        .future-match span, .future-match div, .future-match b { color: #000 !important; }
 
-        .win { background: #00880033 !important; border-left: 4px solid #00ff41; }
-        .loss { background: #aa000022 !important; border-left: 4px solid #ff4444; }
+        .win { background: #008800 !important; border: 1px solid #00ff41; }
+        .loss { background: #aa0000 !important; border: 1px solid #ff4444; }
 
-        /* Sonuç Vurgulama Aktifse Tam Renk */
-        .full-win { background: #008800 !important; }
-        .full-loss { background: #aa0000 !important; }
+        .draw-highlight { border: 2px solid #f1c40f !important; box-shadow: inset 0 0 15px #f1c40f88; }
 
-        .draw-highlight { border: 1px solid #f1c40f !important; box-shadow: inset 0 0 5px #f1c40f44; }
+        .match-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
+        .status-badge { padding: 2px 8px; border-radius: 3px; font-size: 11px; text-transform: uppercase; font-weight: 900; background: rgba(0,0,0,0.3); }
 
-        /* Sütun Düzeni */
-        .col-teams { flex: 2; min-width: 250px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; }
-        .col-score { width: 40px; text-align: center; color: #f1c40f; font-weight: bold; }
-        .col-goals { flex: 1.5; color: #aaa; font-style: italic; font-size: 10px; }
-        .col-dna { width: 140px; text-align: center; border-left: 1px solid #333; border-right: 1px solid #333; }
-        .col-odds { width: 180px; text-align: right; color: #00ff41; font-weight: bold; }
-        .col-status { width: 80px; text-align: center; font-weight: 900; font-size: 9px; }
+        input, select { background: #000; color: #00ff41; border: 1px solid #444; padding: 8px; border-radius: 4px; font-family: inherit; }
+        #log { height: 600px; overflow-y: auto; padding-right: 10px; border-top: 1px solid #333; margin-top: 10px; }
+        .puan-display { font-size: 3em; color: #f1c40f; text-align: center; text-shadow: 0 0 15px #f1c40f; margin: 10px 0; }
+        #stats { color: #f1c40f; background: #222; padding: 15px; border-radius: 5px; text-align: center; font-size: 1.2em; border: 1px solid #f1c40f; margin-bottom: 10px; }
+        h4 { margin: 0 0 5px 0; font-size: 11px; color: #aaa; text-transform: uppercase; }
 
-        input, select { background: #000; color: #00ff41; border: 1px solid #444; padding: 6px; border-radius: 4px; font-family: inherit; font-size: 11px; }
-        #log { height: 700px; overflow-y: auto; padding-right: 5px; border-top: 1px solid #333; margin-top: 10px; }
-        #stats { color: #f1c40f; background: #222; padding: 10px; border-radius: 5px; text-align: center; font-size: 1.1em; border: 1px solid #f1c40f; margin-bottom: 10px; }
-        h4 { margin: 0 0 5px 0; font-size: 10px; color: #aaa; text-transform: uppercase; }
+        .goal-stats { font-size: 10px; color: #aaa; margin-top: 3px; font-style: italic; }
 
+        /* Oran Filtreleri Gridi */
         .odds-filter-container {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 10px;
             background: #111;
-            padding: 8px;
+            padding: 10px;
             border: 1px solid #333;
             border-radius: 8px;
             margin-top: 10px;
         }
-        .odds-sub-group { display: flex; flex-direction: column; gap: 2px; }
+        .odds-sub-group { display: flex; flex-direction: column; gap: 3px; }
         .odds-sub-group label { font-size: 9px; color: #00d4ff; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
-    <h2 style="text-align:center; color: #f1c40f; text-transform: uppercase; border-bottom: 2px solid #00ff41; padding-bottom: 10px; margin-top: 0;">🧬 ENFIBONACCI v27.4 - ULTRA KOMPAKT</h2>
+    <h2 style="text-align:center; color: #f1c40f; text-transform: uppercase; border-bottom: 2px solid #00ff41; padding-bottom: 10px; margin-top: 0;">🧬 ENFIBONACCI v27.2 - FULL PANEL</h2>
 
     <div class="input-grid">
         <div>
-            <h4>1. GEÇMİŞ MAÇLAR:</h4>
-            <textarea id="pastInput" placeholder="Skorlu geçmiş maçları yapıştırın..."></textarea>
+            <h4>1. GEÇMİŞ MAÇLAR (Analiz Arşivi):</h4>
+            <textarea id="pastInput" placeholder="Skorlu geçmiş maçları buraya yapıştırın..."></textarea>
         </div>
         <div>
-            <h4>2. FİKSTÜR:</h4>
-            <textarea id="fixtureInput" placeholder="Gelecek maçları yapıştırın..."></textarea>
+            <h4>2. FİKSTÜR (Yeni Tahminler):</h4>
+            <textarea id="fixtureInput" placeholder="Analiz edilecek gelecek maçları buraya yapıştırın..."></textarea>
         </div>
     </div>
-    <button onclick="superParse()">📊 ANALİZ ET VE LİSTELE</button>
+    <button onclick="superParse()">📊 VERİLERİ SENTEZLE VE ANALİZ ET</button>
 
     <div class="grid">
+        <!-- TEK PANEL: STRATEJİK FİLTRELER VE LİSTE -->
         <div class="card">
-            <div class="filter-grid" style="background: #1a1a1a; border: 1px solid #f1c40f; padding: 10px;">
+            <h3 style="border-bottom: 1px solid #333; padding-bottom: 5px;">STRATEJİK FİLTRELEME VE ANALİZ LİSTESİ</h3>
+
+            <div class="filter-grid" style="background: #1a1a1a; border: 1px solid #f1c40f;">
                 <div class="filter-group" style="grid-column: span 2;">
                     <label style="color: #00ff41; font-weight: bold;">SONUÇ VURGULAMA (ODAK ANALİZİ)</label>
                     <select id="filter_focus" onchange="renderList()" style="border: 1px solid #00ff41; color: #00ff41;">
-                        <option value="ALL">DNA ODAKLI GÖRÜNÜM</option>
-                        <option value="1">1 ODAKLI (1 BİTENLER YEŞİL)</option>
-                        <option value="X">X ODAKLI (X BİTENLER YEŞİL)</option>
-                        <option value="2">2 ODAKLI (2 BİTENLER YEŞİL)</option>
+                        <option value="ALL">DNA TAHMİN ODAKLI (NORMAL)</option>
+                        <option value="1">1 ODAKLI (GERÇEKTE 1 BİTENLER YEŞİL)</option>
+                        <option value="X">X ODAKLI (GERÇEKTE X BİTENLER YEŞİL)</option>
+                        <option value="2">2 ODAKLI (GERÇEKTE 2 BİTENLER YEŞİL)</option>
                     </select>
                 </div>
             </div>
 
-            <div class="filter-grid" style="padding: 10px;">
+            <div class="filter-grid">
                 <div class="filter-group">
-                    <label>SİSTEM TAHMİNİ</label>
+                    <label>SİSTEM TAHMİNLERİ</label>
                     <select id="filter_prediction" onchange="renderList()">
-                        <option value="ALL">HEPSİ</option>
+                        <option value="ALL">TÜM TAHMİNLER</option>
                         <option value="1">SADECE 1</option>
                         <option value="X">SADECE X</option>
                         <option value="2">SADECE 2</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>SIRALAMA ARALIĞI</label>
-                    <div style="display: flex; gap:5px;">
-                        <input type="number" id="rank_min" value="1" min="1" style="width: 50%">
-                        <input type="number" id="rank_max" value="30" min="1" style="width: 50%">
-                    </div>
+                    <label>GERÇEK SONUÇLAR</label>
+                    <select id="filter_actual" onchange="renderList()">
+                        <option value="ALL">TÜM SONUÇLAR</option>
+                        <option value="1">1 BİTENLER</option>
+                        <option value="X">X BİTENLER</option>
+                        <option value="2">2 BİTENLER</option>
+                    </select>
                 </div>
             </div>
 
+            <div class="filter-grid" style="background:#111;">
+                <div class="filter-group"><label>SIRALAMA MIN</label><input type="number" id="rank_min" value="1" min="1"></div>
+                <div class="filter-group"><label>SIRALAMA MAX</label><input type="number" id="rank_max" value="30" min="1"></div>
+            </div>
+
+            <!-- GELİŞMİŞ ORAN FİLTRELERİ -->
             <div class="odds-filter-container">
                 <div class="odds-sub-group">
-                    <label>1 (MIN/MAX)</label>
-                    <input type="number" id="f1_min" value="0.00" step="0.01">
-                    <input type="number" id="f1_max" value="99.0" step="0.01">
+                    <label>ORAN 1 (MIN/MAX)</label>
+                    <input type="number" id="f1_min" value="0.00" step="0.01" style="font-size: 10px; margin-bottom: 2px;">
+                    <input type="number" id="f1_max" value="99.0" step="0.01" style="font-size: 10px;">
                 </div>
                 <div class="odds-sub-group">
-                    <label>X (MIN/MAX)</label>
-                    <input type="number" id="fx_min" value="0.00" step="0.01">
-                    <input type="number" id="fx_max" value="99.0" step="0.01">
+                    <label>ORAN X (MIN/MAX)</label>
+                    <input type="number" id="fx_min" value="0.00" step="0.01" style="font-size: 10px; margin-bottom: 2px;">
+                    <input type="number" id="fx_max" value="99.0" step="0.01" style="font-size: 10px;">
                 </div>
                 <div class="odds-sub-group">
-                    <label>2 (MIN/MAX)</label>
-                    <input type="number" id="f2_min" value="0.00" step="0.01">
-                    <input type="number" id="f2_max" value="99.0" step="0.01">
+                    <label>ORAN 2 (MIN/MAX)</label>
+                    <input type="number" id="f2_min" value="0.00" step="0.01" style="font-size: 10px; margin-bottom: 2px;">
+                    <input type="number" id="f2_max" value="99.0" step="0.01" style="font-size: 10px;">
                 </div>
             </div>
 
-            <button onclick="renderList()" style="background:#f1c40f; color:#000; box-shadow: 0 4px #886600; margin-top: 10px;">FİLTRELERİ GÜNCELLE</button>
-            <div id="stats" style="margin-top:15px;"></div>
+            <button onclick="renderList()" style="background:#f1c40f; color:#000; box-shadow: 0 4px #886600; margin-top: 15px;">FİLTRELERİ UYGULA VE LİSTEYİ GÜNCELLE</button>
+            <div id="stats" style="margin-top:20px;"></div>
             <div id="log"></div>
         </div>
     </div>
@@ -172,30 +164,46 @@ function ultraClean(text) {
 function solveRadicalDNA(o1, ox, o2, hStats, aStats, hRank, aRank) {
     let diff = Math.abs(o1 - o2);
     let puan = 0;
+
     if (ox <= 3.45) puan += 4;
     if (diff <= 0.85) puan += 4;
     if (ox < 3.05) puan += 2;
-    if (hRank > aRank && aRank <= 5 && hStats && hStats.avgGC < 1.3) { puan += 1; }
-    if (hStats && aStats && hStats.avgGC < 1.1 && aStats.avgGC < 1.1) { puan += 1; }
+
+    if (hRank > aRank && aRank <= 5 && hStats && hStats.avgGC < 1.3) {
+        puan += 1;
+    }
+
+    if (hStats && aStats && hStats.avgGC < 1.1 && aStats.avgGC < 1.1) {
+        puan += 1;
+    }
+
     return { decision: (puan >= 5 ? 'X' : (o1 < o2 ? '1' : '2')), puan: Math.min(puan, 10), diff };
 }
 
 function calculateStandings(matches) {
     leagueTable = {};
     teamSet.forEach(team => { leagueTable[team] = { points: 0, rank: 0, gs: 0, gc: 0, played: 0 }; });
+
     matches.forEach(m => {
         if (!m.fut && m.sc !== "PENDING") {
             let s = m.sc.split(':');
             let hG = parseInt(s[0]), aG = parseInt(s[1]);
             if (!isNaN(hG) && !isNaN(aG)) {
-                leagueTable[m.h].gs += hG; leagueTable[m.h].gc += aG; leagueTable[m.h].played++;
-                leagueTable[m.a].gs += aG; leagueTable[m.a].gc += hG; leagueTable[m.a].played++;
+                leagueTable[m.h].gs += hG;
+                leagueTable[m.h].gc += aG;
+                leagueTable[m.h].played++;
+
+                leagueTable[m.a].gs += aG;
+                leagueTable[m.a].gc += hG;
+                leagueTable[m.a].played++;
+
                 if (hG > aG) leagueTable[m.h].points += 3;
                 else if (hG < aG) leagueTable[m.a].points += 3;
                 else { leagueTable[m.h].points += 1; leagueTable[m.a].points += 1; }
             }
         }
     });
+
     let sorted = Array.from(teamSet).sort((a,b) => (leagueTable[b].points - leagueTable[a].points) || (leagueTable[b].gs - leagueTable[b].gc) - (leagueTable[a].gs - leagueTable[a].gc) || a.localeCompare(b));
     sorted.forEach((team, index) => {
         leagueTable[team].rank = index + 1;
@@ -208,12 +216,14 @@ function parseMatches(raw, isFixture) {
     const lines = raw.split(/\r?\n/);
     const results = [];
     const matchRegex = /^(?:.*?\d{2}:\d{2}\s+)?(.+?)\s+-\s+(.+?)(?:\s+(\d{1,2}\s*:\s*\d{1,2}))?\s+(?:(\d{1,2})\s+)?(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)/;
+
     lines.forEach(line => {
         let cleanLine = line.trim();
         if (!cleanLine) return;
         let match = cleanLine.match(matchRegex);
         if (match) {
-            let home = ultraClean(match[1]); let away = ultraClean(match[2]);
+            let home = ultraClean(match[1]);
+            let away = ultraClean(match[2]);
             let score = match[3] ? match[3].replace(/\s+/g, '') : "PENDING";
             let o1 = parseFloat(match[5]), ox = parseFloat(match[6]), o2 = parseFloat(match[7]);
             if (home && away && !isNaN(o1)) {
@@ -234,51 +244,72 @@ function superParse() {
     const pastRaw = document.getElementById('pastInput').value;
     const fixtureRaw = document.getElementById('fixtureInput').value;
     teamSet.clear();
+
     const pastMatches = parseMatches(pastRaw, false);
     calculateStandings(pastMatches);
+
     const fixtureMatches = parseMatches(fixtureRaw, true);
     allMatches = [...fixtureMatches.reverse(), ...pastMatches];
+
     renderList();
 }
 
 function renderList() {
     const log = document.getElementById('log'); log.innerHTML = "";
     const filterPred = document.getElementById('filter_prediction').value;
+    const filterActual = document.getElementById('filter_actual').value;
     const filterFocus = document.getElementById('filter_focus').value;
+
+    // ORAN FİLTRELERİ
     const f1_min = parseFloat(document.getElementById('f1_min').value) || 0;
     const f1_max = parseFloat(document.getElementById('f1_max').value) || 99;
     const fx_min = parseFloat(document.getElementById('fx_min').value) || 0;
     const fx_max = parseFloat(document.getElementById('fx_max').value) || 99;
     const f2_min = parseFloat(document.getElementById('f2_min').value) || 0;
     const f2_max = parseFloat(document.getElementById('f2_max').value) || 99;
+
     const r_min = parseInt(document.getElementById('rank_min').value) || 1;
     const r_max = parseInt(document.getElementById('rank_max').value) || 100;
+
     let hits = 0, count = 0;
 
     allMatches.forEach(m => {
         let hInfo = leagueTable[m.h] || {rank:0, avgGS:0, avgGC:0};
         let aInfo = leagueTable[m.a] || {rank:0, avgGS:0, avgGC:0};
+
         let dna = solveRadicalDNA(m.od[0], m.od[1], m.od[2], hInfo, aInfo, hInfo.rank, aInfo.rank);
 
+        // SIRALAMA FİLTRESİ
         if (!m.fut && (hInfo.rank < r_min || hInfo.rank > r_max || aInfo.rank < r_min || aInfo.rank > r_max)) return;
-        if (m.od[0] < f1_min || m.od[0] > f1_max || m.od[1] < fx_min || m.od[1] > fx_max || m.od[2] < f2_min || m.od[2] > f2_max) return;
+
+        // ORAN FİLTRELEME MANTIĞI
+        if (m.od[0] < f1_min || m.od[0] > f1_max) return;
+        if (m.od[1] < fx_min || m.od[1] > fx_max) return;
+        if (m.od[2] < f2_min || m.od[2] > f2_max) return;
+
         if (filterPred !== "ALL" && dna.decision !== filterPred) return;
+        if (filterActual !== "ALL" && m.r !== filterActual) return;
 
         let isCorrect = (dna.decision === m.r);
         if(!m.fut) { count++; if(isCorrect) hits++; }
 
-        let rowClass = m.fut ? 'future-match' : (filterFocus === "ALL" ? (isCorrect ? 'win' : 'loss') : (m.r === filterFocus ? 'full-win' : 'full-loss'));
+        let rowClass = m.fut ? 'future-match' : (filterFocus === "ALL" ? (isCorrect ? 'win' : 'loss') : (m.r === filterFocus ? 'win' : 'loss'));
         let drawBorder = (dna.decision === 'X') ? 'draw-highlight' : '';
 
         log.innerHTML += `
             <div class="match-row ${rowClass} ${drawBorder}">
-                <div class="col-teams">${m.h} (#${hInfo.rank}) - ${m.a} (#${aInfo.rank})</div>
-                <div class="col-score">${m.sc === 'PENDING' ? '?' : m.sc}</div>
-                <div class="col-goals">Ev:V${hInfo.avgGS} Y${hInfo.avgGC} | Dep:V${aInfo.avgGS} Y${aInfo.avgGC}</div>
-                <div class="col-dna">DNA:${dna.puan}/10 | T:${dna.decision} | S:${m.r}</div>
-                <div class="col-odds">1(${m.od[0]}) X(${m.od[1]}) 2(${m.od[2]})</div>
-                <div class="col-status">
-                    <span class="status-badge">${m.fut ? 'FUTURE' : (isCorrect ? 'BASHARILI' : 'HATALI')}</span>
+                <div class="match-header">
+                    <span>${m.h} (#${hInfo.rank}) - ${m.a} (#${aInfo.rank}) <b style="color:inherit">${m.sc==='PENDING'?'':m.sc}</b></span>
+                    <span class="status-badge">${m.fut ? 'GELECEK MAÇ' : (filterFocus === "ALL" ? (isCorrect ? 'BAŞARILI' : 'HATALI') : (m.r === filterFocus ? 'HEDEF TUTTU' : 'HEDEF KAÇTI'))}</span>
+                </div>
+                <div class="goal-stats">
+                    Ev: [V: ${hInfo.avgGS} / Y: ${hInfo.avgGC}] | Dep: [V: ${aInfo.avgGS} / Y: ${aInfo.avgGC}]
+                </div>
+                <div style="font-size:11px; opacity: 0.9; margin-top:5px;">
+                    DNA: ${dna.puan}/10 | Tahmin: <b>${dna.decision}</b> | Sonuç: <b>${m.r}</b>
+                </div>
+                <div style="font-size:11px; margin-top:5px; font-weight: bold;">
+                    ORANLAR: 1(${m.od[0]}) X(${m.od[1]}) 2(${m.od[2]})
                 </div>
             </div>`;
     });
