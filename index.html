@@ -326,6 +326,14 @@
                 <button id="edgeBtn" onclick="toggleEdge()" style="background:#7c3aed; box-shadow:0 2px 6px rgba(124,58,237,0.3);">🎯 EDGE MODU: KAPALI</button>
             </div>
 
+            <div class="filter-grid" style="border-color:#0ea5e9; align-items:end;">
+                <div class="filter-group" style="grid-column: span 1;">
+                    <label style="color:#0ea5e9;">🚫 BERABERE BİTMEZ: G-DNA ≤</label>
+                    <input type="number" id="nd_g" value="3" min="0" max="10" step="1" style="border-color:#0ea5e9;">
+                </div>
+                <button id="ndBtn" onclick="toggleNoDraw()" style="background:#0ea5e9; box-shadow:0 2px 6px rgba(14,165,233,0.3);">🚫 BERABERE BİTMEZ MODU: KAPALI</button>
+            </div>
+
             <div class="legend">
                 <b>O-DNA</b> = oran tabanlı tahmin (eski sistem) &nbsp;•&nbsp;
                 <b>BERABERE %</b> = sadece gol/sıralamadan Poisson beraberlik olasılığı &nbsp;•&nbsp;
@@ -357,18 +365,36 @@ let leagueTable = {};
 let exportText = "";
 let displayedMatches = [];
 let edgeMode = false;
+let noDrawMode = false;
 let ledger = JSON.parse(localStorage.getItem('parion_ledger') || '[]');
 
 function toggleEdge() {
     edgeMode = !edgeMode;
+    if (edgeMode) { noDrawMode = false; syncNoDrawBtn(); }
     const btn = document.getElementById('edgeBtn');
     if (edgeMode) {
         btn.textContent = '🎯 EDGE MODU: AÇIK (öneri tuttu=yeşil, kaçtı=kırmızı)';
         btn.style.background = '#16a34a';
     } else {
-        btn.textContent = '🎯 EDGE MODU: KAPALI (vurgula — gizleme yok)';
+        btn.textContent = '🎯 EDGE MODU: KAPALI';
         btn.style.background = '#7c3aed';
     }
+    renderList();
+}
+
+function syncNoDrawBtn() {
+    const b = document.getElementById('ndBtn');
+    if (noDrawMode) { b.textContent = '🚫 BERABERE BİTMEZ MODU: AÇIK (doğru=yeşil, berabere çıktı=kırmızı)'; b.style.background = '#16a34a'; }
+    else { b.textContent = '🚫 BERABERE BİTMEZ MODU: KAPALI'; b.style.background = '#0ea5e9'; }
+}
+
+function toggleNoDraw() {
+    noDrawMode = !noDrawMode;
+    if (noDrawMode) {
+        edgeMode = false;
+        const e = document.getElementById('edgeBtn'); e.textContent = '🎯 EDGE MODU: KAPALI'; e.style.background = '#7c3aed';
+    }
+    syncNoDrawBtn();
     renderList();
 }
 
@@ -522,7 +548,9 @@ function renderList() {
     const edge_g = parseInt(document.getElementById('edge_g').value) || 6;
     const edge_x = parseFloat(document.getElementById('edge_x').value) || 3.3;
     const edge_bal = parseFloat(document.getElementById('edge_bal').value) || 99;
+    const nd_g = parseInt(document.getElementById('nd_g').value);
     let edgeBets = 0, edgeHits = 0, edgeRet = 0, edgeFut = 0;
+    let ndBets = 0, ndOk = 0, ndFavRet = 0, ndFut = 0;
 
     // ORAN FİLTRELERİ
     const f1_min = parseFloat(document.getElementById('f1_min').value) || 0;
@@ -568,7 +596,17 @@ function renderList() {
 
         // ---- RENKLENDİRME MANTIĞI ----
         let rowClass = '', drawBorder = '', statusText;
-        if (edgeMode) {
+        if (noDrawMode) {
+            // BERABERE BİTMEZ MODU: G-DNA düşük olanlar "berabere olmaz" diye işaretlenir
+            let isPick = gdna.hasData && gdna.puan <= nd_g;
+            let fav = m.od[0] < m.od[2] ? '1' : '2';
+            if (isPick && m.fut) { rowClass = 'future-match'; statusText = 'ÖNERİ (' + fav + ')'; ndFut++; }
+            else if (isPick) {
+                ndBets++;
+                if (m.r !== 'X') { rowClass = 'win'; statusText = 'DOĞRU (' + m.r + ')'; ndOk++; if (m.r === fav) ndFavRet += Math.min(m.od[0], m.od[2]); }
+                else { rowClass = 'loss'; statusText = 'BERABERE!'; }
+            } else { rowClass = ''; statusText = m.fut ? 'GELECEK' : '-'; }
+        } else if (edgeMode) {
             // EDGE MODU: sadece kurala uyan öneriler renklenir, diğerleri nötr (gizleme yok)
             let isEdge = gdna.hasData && gdna.puan >= edge_g && m.od[1] < edge_x && Math.abs(m.od[0] - m.od[2]) < edge_bal;
             if (isEdge && m.fut) { rowClass = 'future-match'; statusText = 'ÖNERİ (X)'; edgeFut++; }
@@ -621,7 +659,12 @@ function renderList() {
     });
 
     exportText = exportLines.join('\n');
-    if (edgeMode) {
+    if (noDrawMode) {
+        let nacc = ndBets ? (ndOk / ndBets * 100) : 0;
+        let nroi = ndBets ? ((ndFavRet - ndBets) / ndBets * 100) : 0;
+        document.getElementById('stats').innerText =
+            `🚫 BERABERE BİTMEZ (G≤${nd_g}) → Geçmiş tahmin: ${ndBets} | Doğru (berabere olmadı): ${ndOk} | Doğruluk: %${nacc.toFixed(1)} | Favoriye bahis ROI: %${nroi.toFixed(1)}  ||  Bekleyen (gelecek): ${ndFut}`;
+    } else if (edgeMode) {
         let eroi = edgeBets ? ((edgeRet - edgeBets) / edgeBets * 100) : 0;
         let ehit = edgeBets ? (edgeHits / edgeBets * 100) : 0;
         document.getElementById('stats').innerText =
