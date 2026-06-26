@@ -245,7 +245,7 @@ function renderList() {
     const f2_min=parseFloat(document.getElementById('f2_min').value)||0, f2_max=parseFloat(document.getElementById('f2_max').value)||99;
     const r_min=parseInt(document.getElementById('rank_min').value)||1, r_max=parseInt(document.getElementById('rank_max').value)||100;
 
-    let exportLines = ["EV-KATEGORI | DEP-KATEGORI | ORAN-X | SONUC"];
+    let exportLines = ["EV-KATEGORI | DEP-KATEGORI | TOPLAM-GOL | UST/ALT | SONUC"];
 
     allMatches.forEach(m => {
         let H = leagueTable[m.h] || {rank:0, homeType:'?'};
@@ -253,10 +253,17 @@ function renderList() {
         if (!m.fut && (H.rank<r_min||H.rank>r_max||A.rank<r_min||A.rank>r_max)) return;
         if (m.od[0]<f1_min||m.od[0]>f1_max||m.od[1]<fx_min||m.od[1]>fx_max||m.od[2]<f2_min||m.od[2]>f2_max) return;
 
+        // Toplam gol + ÜST/ALT 2.5
+        let tot = null, ua = '?';
+        if (!m.fut && m.sc !== 'PENDING') {
+            let s = m.sc.split(':'); let g0 = parseInt(s[0]), g1 = parseInt(s[1]);
+            if (!isNaN(g0) && !isNaN(g1)) { tot = g0 + g1; ua = tot >= 3 ? 'ÜST' : 'ALT'; }
+        }
+
         let rowClass='', statusText;
         if (m.fut) { rowClass='future-match'; statusText='GELECEK'; }
         else if (filterFocus!=='ALL') { if (m.r===filterFocus){rowClass='win';statusText='VURGU';} else {rowClass='';statusText='-';} }
-        else { statusText = 'SONUÇ: '+m.r; }
+        else { statusText = (tot!=null ? ('T'+tot+' '+ua) : 'SONUÇ: '+m.r); }
 
         log.innerHTML += `
             <div class="match-row ${rowClass}">
@@ -267,8 +274,8 @@ function renderList() {
                 <div class="col-status"><span class="status-badge">${statusText}</span></div>
             </div>`;
 
-        if (!m.fut && m.r!=='PENDING') {
-            exportLines.push(`${H.homeType} | ${A.awayType} | ${m.od[1]} | ${m.r}`);
+        if (!m.fut && m.r!=='PENDING' && tot!=null) {
+            exportLines.push(`${H.homeType} | ${A.awayType} | ${tot} | ${ua} | ${m.r}`);
         }
     });
     exportText = exportLines.join('\n');
