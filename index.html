@@ -73,15 +73,6 @@
     <button onclick="superParse()">📊 ANALİZ ET VE KATEGORİLE</button>
 
     <div class="card">
-        <h3>🏷️ TAKIM KATEGORİLERİ (ev / deplasman ayrı, lige göre)</h3>
-        <div class="hint">
-            Hücum: <b>Güçlü/Orta/Zayıf</b> · Savunma: <b>Sağlam/Orta/Açık</b> (lig ortalamasına göre). Tipler:
-            DOMİNANT, HÜCUMCU, GOLLÜ, DEFANSİF, DENGELİ, DENGESİZ, <b>KİLİT</b>, SÖNÜK, ZAYIF.
-        </div>
-        <div id="teamCats"></div>
-    </div>
-
-    <div class="card">
         <h3>📋 MAÇ LİSTESİ (kategori etiketli)</h3>
         <div class="filter-grid">
             <div class="filter-group" style="grid-column:span 2;">
@@ -248,8 +239,19 @@ function superParse() {
     const fix = parseMatches(document.getElementById('fixtureInput').value, true);
     allMatches = [...fix.reverse(), ...past];
     buildTeamHistory();
-    renderTeamCats();
     renderList();
+}
+
+// son N maç G/B/M sayıları
+function form5(team, matchIdx, N) {
+    let hist = teamHistory[team] || [];
+    let older = hist.filter(e => e.idx > matchIdx).slice(0, N);
+    return {
+        g: older.filter(e => e.res === 'G').length,
+        b: older.filter(e => e.res === 'B').length,
+        m: older.filter(e => e.res === 'M').length,
+        total: older.length
+    };
 }
 
 // Her takımın sonuçlarını (G/B/M) allMatches sırasına göre topla (küçük idx = daha yeni)
@@ -302,7 +304,7 @@ function renderList() {
     const afType=document.getElementById('af_type').value, afN=parseInt(document.getElementById('af_n').value)||5, afK=parseInt(document.getElementById('af_k').value)||1;
     const formActive = hfType!=='OFF' || afType!=='OFF';
 
-    let exportLines = ["EV-KATEGORI | DEP-KATEGORI | TOPLAM-GOL | UST/ALT | SONUC"];
+    let exportLines = ["EV_SIRA | DEP_SIRA | O1 | OX | O2 | EV_SON5(G-B-M) | DEP_SON5(G-B-M) | TOPLAM_GOL | UST/ALT | SONUC"];
 
     allMatches.forEach((m, idx) => {
         let H = leagueTable[m.h] || {rank:0, homeType:'?'};
@@ -331,20 +333,26 @@ function renderList() {
             statusText = (homeOk&&awayOk?'✓ ':'') + parts.join(' · ');
         }
 
+        // Ev/dep son 5 maç formu (G-B-M)
+        let hf = form5(m.h, idx, 5), af = form5(m.a, idx, 5);
+        let hfStr = hf.g+'G'+hf.b+'B'+hf.m+'M', afStr = af.g+'G'+af.b+'B'+af.m+'M';
+
         log.innerHTML += `
             <div class="match-row ${rowClass}">
                 <div class="col-teams">${m.h} (#${H.rank}) - ${m.a} (#${A.rank})</div>
-                <div class="col-cat">${H.homeType} ⚔ ${A.awayType}</div>
+                <div class="col-cat">Ev:${hfStr} · Dep:${afStr}</div>
                 <div class="col-score mono">${m.sc==='PENDING'?'?':m.sc}</div>
                 <div class="col-odds">1(${m.od[0]}) X(${m.od[1]}) 2(${m.od[2]})</div>
                 <div class="col-status"><span class="status-badge">${statusText}</span></div>
             </div>`;
 
         if (!m.fut && m.r!=='PENDING' && tot!=null) {
-            exportLines.push(`${H.homeType} | ${A.awayType} | ${tot} | ${ua} | ${m.r}`);
+            // Ham özellikler: sıra, oranlar, son5 form, gol, sonuç
+            exportLines.push(`${H.rank} | ${A.rank} | ${m.od[0]} | ${m.od[1]} | ${m.od[2]} | ${hf.g}-${hf.b}-${hf.m} | ${af.g}-${af.b}-${af.m} | ${tot} | ${ua} | ${m.r}`);
         }
     });
     exportText = exportLines.join('\n');
+    document.getElementById('stats').innerText = 'Analiz için hazır geçmiş maç: ' + (exportLines.length-1) + '  •  📋 Kopyala ile Claude\'a gönder.';
 }
 
 function copyCategories() {
