@@ -127,22 +127,10 @@
             </div>
         </div>
 
-        <div class="filter-grid" style="border-color:#16a34a;">
-            <div class="filter-group" style="grid-column:span 2;">
-                <label style="color:#16a34a;">⚖️ BERABERE ADAYI MODU (analiz sonucu: dengeli maçlar)</label>
-            </div>
-            <div class="filter-group">
-                <label>X oranı ≤ (max)</label>
-                <input type="number" id="bd_x" value="3.4" step="0.1">
-            </div>
-            <div class="filter-group">
-                <label>Sıra farkı ≤ &nbsp;·&nbsp; |Oran1-Oran2| ≤</label>
-                <div style="display:flex; gap:6px;">
-                    <input type="number" id="bd_rank" value="6" min="0" style="width:50%">
-                    <input type="number" id="bd_bal" value="1.0" step="0.1" style="width:50%">
-                </div>
-            </div>
-            <button id="bdBtn" onclick="toggleBd()" style="grid-column:span 2; background:#16a34a;">⚖️ BERABERE ADAYI MODU: KAPALI</button>
+        <div class="odds-filter-container" style="border-color:#16a34a;">
+            <div class="odds-sub-group"><label style="color:#16a34a;">🧮 BİZİM ORAN 1 (MIN/MAX)</label><input type="number" id="m1_min" value="0.00" step="0.01"><input type="number" id="m1_max" value="99.0" step="0.01"></div>
+            <div class="odds-sub-group"><label style="color:#16a34a;">🧮 BİZİM ORAN X (MIN/MAX)</label><input type="number" id="mx_min" value="0.00" step="0.01"><input type="number" id="mx_max" value="99.0" step="0.01"></div>
+            <div class="odds-sub-group"><label style="color:#16a34a;">🧮 BİZİM ORAN 2 (MIN/MAX)</label><input type="number" id="m2_min" value="0.00" step="0.01"><input type="number" id="m2_max" value="99.0" step="0.01"></div>
         </div>
 
         <button class="secondary" onclick="renderList()">FİLTRELERİ UYGULA</button>
@@ -293,15 +281,6 @@ function form5(team, matchIdx, N) {
     };
 }
 
-// BERABERE ADAYI MODU
-let bdMode = false;
-function toggleBd() {
-    bdMode = !bdMode;
-    const b = document.getElementById('bdBtn');
-    if (bdMode) { b.textContent = '⚖️ BERABERE ADAYI: AÇIK (aday+berabere=yeşil, aday ama değil=kırmızı)'; b.style.background = '#15803d'; }
-    else { b.textContent = '⚖️ BERABERE ADAYI MODU: KAPALI'; b.style.background = '#16a34a'; }
-    renderList();
-}
 
 // Her takımın sonuçlarını (G/B/M) allMatches sırasına göre topla (küçük idx = daha yeni)
 let teamHistory = {};
@@ -352,8 +331,9 @@ function renderList() {
     const hfType=document.getElementById('hf_type').value, hfN=parseInt(document.getElementById('hf_n').value)||5, hfK=parseInt(document.getElementById('hf_k').value)||1;
     const afType=document.getElementById('af_type').value, afN=parseInt(document.getElementById('af_n').value)||5, afK=parseInt(document.getElementById('af_k').value)||1;
     const formActive = hfType!=='OFF' || afType!=='OFF';
-    const bdX=parseFloat(document.getElementById('bd_x').value)||3.4, bdRank=parseInt(document.getElementById('bd_rank').value)||6, bdBal=parseFloat(document.getElementById('bd_bal').value)||1.0;
-    let bdN=0, bdHit=0, bdRet=0, bdFut=0;
+    const m1_min=parseFloat(document.getElementById('m1_min').value)||0, m1_max=parseFloat(document.getElementById('m1_max').value)||99;
+    const mx_min=parseFloat(document.getElementById('mx_min').value)||0, mx_max=parseFloat(document.getElementById('mx_max').value)||99;
+    const m2_min=parseFloat(document.getElementById('m2_min').value)||0, m2_max=parseFloat(document.getElementById('m2_max').value)||99;
 
     let exportLines = ["EV_SIRA | DEP_SIRA | O1 | OX | O2 | EV_SON5(G-B-M) | DEP_SON5(G-B-M) | TOPLAM_GOL | UST/ALT | SONUC"];
 
@@ -362,6 +342,11 @@ function renderList() {
         let A = leagueTable[m.a] || {rank:0, awayType:'?'};
         if (!m.fut && (H.rank<r_min||H.rank>r_max||A.rank<r_min||A.rank>r_max)) return;
         if (m.od[0]<f1_min||m.od[0]>f1_max||m.od[1]<fx_min||m.od[1]>fx_max||m.od[2]<f2_min||m.od[2]>f2_max) return;
+
+        // BİZİM MODEL ORANIMIZ + değer tespiti
+        let mo = modelOdds(H, A);
+        // Bizim oran aralığı filtresi
+        if (mo.o1<m1_min||mo.o1>m1_max||mo.ox<mx_min||mo.ox>mx_max||mo.o2<m2_min||mo.o2>m2_max) return;
 
         // Toplam gol + ÜST/ALT 2.5
         let tot = null, ua = '?';
@@ -384,23 +369,10 @@ function renderList() {
             statusText = (homeOk&&awayOk?'✓ ':'') + parts.join(' · ');
         }
 
-        // BERABERE ADAYI MODU (en öncelikli): dengeli maç = berabere adayı
-        if (bdMode) {
-            let sf = Math.abs(H.rank - A.rank), bal = Math.abs(m.od[0] - m.od[2]);
-            let cand = m.od[1] <= bdX && sf <= bdRank && bal <= bdBal && H.rank>0 && A.rank>0;
-            if (cand && m.fut) { rowClass='future-match'; statusText='⚖️ BERABERE ADAYI'; bdFut++; }
-            else if (cand) {
-                bdN++;
-                if (m.r==='X') { rowClass='win'; statusText='✓ BERABERE'; bdHit++; bdRet+=m.od[1]; }
-                else { rowClass='loss'; statusText='✗ ('+m.r+')'; }
-            } else { rowClass=''; statusText = m.fut ? 'GELECEK' : '-'; }
-        }
-
         // Ev/dep son 5 maç formu (G-B-M)
         let hf = form5(m.h, idx, 5), af = form5(m.a, idx, 5);
 
-        // BİZİM MODEL ORANIMIZ + değer tespiti
-        let mo = modelOdds(H, A);
+        // Değer tespiti (mo yukarıda hesaplandı)
         let ours=[mo.o1,mo.ox,mo.o2], mkt=[m.od[0],m.od[1],m.od[2]], lbl=['1','X','2'];
         let bestRatio=0, bestI=-1;
         for(let i=0;i<3;i++){ let ratio=mkt[i]/ours[i]; if(ratio>bestRatio){bestRatio=ratio;bestI=i;} }
@@ -422,13 +394,7 @@ function renderList() {
         }
     });
     exportText = exportLines.join('\n');
-    if (bdMode) {
-        let acc = bdN ? (bdHit/bdN*100) : 0, roi = bdN ? ((bdRet-bdN)/bdN*100) : 0;
-        document.getElementById('stats').innerText =
-            `⚖️ BERABERE ADAYI (X≤${bdX} & sıra farkı≤${bdRank} & |1-2|≤${bdBal}) → Geçmiş aday: ${bdN} | Berabere: ${bdHit} | İsabet: %${acc.toFixed(1)} | X-ROI: %${roi.toFixed(1)}  ||  Gelecek aday: ${bdFut}`;
-    } else {
-        document.getElementById('stats').innerText = 'Analiz için hazır geçmiş maç: ' + (exportLines.length-1) + '  •  📋 Kopyala ile Claude\'a gönder.';
-    }
+    document.getElementById('stats').innerText = 'Listelenen maç: ' + document.querySelectorAll('#log .match-row').length + '  •  📋 Kopyala ile Claude\'a gönder.';
 }
 
 function copyCategories() {
