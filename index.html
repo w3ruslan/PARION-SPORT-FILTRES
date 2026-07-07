@@ -115,11 +115,12 @@ function pts(team){ let a=teamHist[team]||[]; let sp=x=>x.reduce((p,c)=>p+c.p,0)
 function last5(team){ let a=(teamHist[team]||[]).slice(0,5); return { pts:a.reduce((s,x)=>s+x.p,0), gf:a.reduce((s,x)=>s+x.gf,0), ga:a.reduce((s,x)=>s+x.ga,0), n:a.length }; }
 
 // === BERABERLİK İHTİMALİ PUANLAMASI (MS X) — kullanıcının algoritması, birebir ===
+const DRAW_WIN = 5; // analiz penceresi: son N maç (tüm sezon değil — yoksa tek bir 4+ gollü maç herkesi diskalifiye eder)
 function drawScore(home, away){
-    let A = teamHist[home]||[], B = teamHist[away]||[];
+    let A = (teamHist[home]||[]).slice(0,DRAW_WIN), B = (teamHist[away]||[]).slice(0,DRAW_WIN);
     if(A.length<3 || B.length<3) return {ok:false, dq:false, score:0, detail:'yetersiz geçmiş maç'};
-    // KURAL 1 — Kaos filtresi: iki takımdan birinin geçmişinde 4+ gollü maç varsa DİSKALİFİYE
-    if(A.concat(B).some(x=>x.gf+x.ga>=4)) return {ok:false, dq:true, score:0, detail:'geçmişte 4+ gollü maç var → kaos'};
+    // KURAL 1 — Kaos filtresi: iki takımdan birinin SON '+DRAW_WIN+' maçında 4+ gollü maç varsa DİSKALİFİYE
+    if(A.concat(B).some(x=>x.gf+x.ga>=4)) return {ok:false, dq:true, score:0, detail:`son ${DRAW_WIN} maçta 4+ gollü maç var → kaos`};
     // KURAL 2 — Gol kısırlığı (max 40): maç başı toplam gol ortalaması
     let avgA = A.reduce((s,x)=>s+x.gf+x.ga,0)/A.length, avgB = B.reduce((s,x)=>s+x.gf+x.ga,0)/B.length;
     let r2 = (avgA<=2.0 && avgB<=2.0) ? 40 : ((avgA<=2.5 && avgB<=2.5) ? 20 : 0);
