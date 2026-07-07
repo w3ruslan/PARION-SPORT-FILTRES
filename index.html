@@ -3,27 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Parion Sport - Veri Düzenleyici</title>
+<title>Parion Sport - Filtre</title>
 <style>
     :root{--bg:#eef1f6;--panel:#fff;--panel2:#f7f9fc;--border:#dde2ea;--text:#1f2a37;--muted:#6b7585;--primary:#2563eb;--primary2:#1d4ed8;--gold:#b7791f;--green:#16a34a;}
     *{box-sizing:border-box;}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);padding:22px;margin:0;line-height:1.4;}
-    .wrap{max-width:1250px;margin:auto;border:1px solid var(--border);padding:24px;background:var(--panel);box-shadow:0 10px 30px rgba(31,42,55,.08);border-radius:14px;}
+    .wrap{max-width:1300px;margin:auto;border:1px solid var(--border);padding:24px;background:var(--panel);box-shadow:0 10px 30px rgba(31,42,55,.08);border-radius:14px;}
     h2.title{text-align:center;font-weight:700;border-bottom:2px solid var(--primary);padding-bottom:12px;margin:0 0 16px;font-size:1.4em;}
     h4{margin:0 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;}
-    textarea{width:100%;height:200px;background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:12px;font-size:12px;border-radius:8px;resize:vertical;font-family:'SF Mono','Consolas','Courier New',monospace;}
-    textarea:focus,input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12);}
-    button{background:var(--primary);color:#fff;border:none;padding:13px;cursor:pointer;font-weight:600;width:100%;font-size:1em;margin-top:10px;text-transform:uppercase;letter-spacing:.3px;border-radius:8px;box-shadow:0 2px 6px rgba(37,99,235,.25);}
+    textarea{width:100%;height:150px;background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:12px;font-size:12px;border-radius:8px;resize:vertical;font-family:'SF Mono','Consolas','Courier New',monospace;}
+    textarea:focus,input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+    button{background:var(--primary);color:#fff;border:none;padding:12px;cursor:pointer;font-weight:600;width:100%;font-size:1em;margin-top:10px;text-transform:uppercase;letter-spacing:.3px;border-radius:8px;box-shadow:0 2px 6px rgba(37,99,235,.25);}
     button:hover{background:var(--primary2);}
+    button.secondary{background:var(--gold);}
     button.copy{background:#7c3aed;}
+    input,select{background:#fff;color:var(--text);border:1px solid var(--border);padding:7px 8px;border-radius:6px;font-family:inherit;font-size:12px;}
+    .fbox{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:12px;}
+    .frow{display:flex;flex-wrap:wrap;gap:14px;align-items:end;}
+    .fg{display:flex;flex-direction:column;gap:4px;}
+    .fg label{font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600;}
+    .fg .mm{display:flex;gap:4px;}
+    .fg .mm input{width:56px;}
+    .blk{border-left:3px solid var(--primary);padding-left:10px;margin-top:10px;}
+    .blk .bt{font-size:11px;font-weight:700;color:var(--primary);margin-bottom:4px;}
     #stats{background:var(--panel2);padding:12px;border-radius:10px;text-align:center;font-weight:600;border:1px solid var(--border);margin:14px 0;}
-    .league{margin-top:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+    .league{margin-top:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
     .league-head{background:var(--primary);color:#fff;padding:8px 14px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;}
     table{width:100%;border-collapse:collapse;font-size:12px;}
     th{background:var(--panel2);color:var(--muted);text-transform:uppercase;font-size:10px;padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);}
     td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:center;}
     td.time{color:var(--gold);font-weight:700;width:52px;}
-    td.match{text-align:left;font-weight:600;min-width:190px;}
+    td.match{text-align:left;font-weight:600;min-width:180px;}
     td.score{font-family:'SF Mono','Consolas',monospace;font-weight:700;color:var(--gold);width:44px;}
     .odds{font-family:'SF Mono','Consolas',monospace;white-space:nowrap;}
     .fav{color:var(--green);font-weight:800;}
@@ -34,17 +44,42 @@
 </head>
 <body>
 <div class="wrap">
-    <h2 class="title">📋 PARION SPORT — VERİ DÜZENLEYİCİ</h2>
-    <h4>Bülteni buraya yapıştır (sayfadan kopyaladığın ham hali):</h4>
-    <textarea id="raw" placeholder="Samedi 01 Novembre ... L1 McDonald's (3) ... yapıştır"></textarea>
-    <button onclick="düzenle()">📊 DÜZENLE VE LİSTELE</button>
-    <button class="copy" onclick="kopyala()">📋 DÜZENLİ VERİYİ KOPYALA</button>
+    <h2 class="title">📋 PARION SPORT — BÜLTEN FİLTRE</h2>
+    <h4>Bülteni buraya yapıştır:</h4>
+    <textarea id="raw" placeholder="L1 McDonald's (3) ... yapıştır"></textarea>
+    <button onclick="düzenle()">📊 DÜZENLE</button>
+
+    <div class="fbox">
+        <div class="frow">
+            <div class="fg"><label>Lig</label><select id="f_lig" onchange="render()"><option value="ALL">HEPSİ</option></select></div>
+            <div class="fg"><label>Saat (min – max)</label><div class="mm"><input id="f_smin" placeholder="0" style="width:56px"><input id="f_smax" placeholder="24" style="width:56px"></div></div>
+            <div class="fg"><label>Skor</label><select id="f_res"><option value="ALL">HEPSİ</option><option value="1">1 bitenler</option><option value="N">Berabere</option><option value="2">2 bitenler</option><option value="PEND">Oynanmamış</option></select></div>
+        </div>
+        <div class="blk"><div class="bt">MAÇ SONUCU ORANLARI</div><div class="frow">
+            <div class="fg"><label>1 (min/max)</label><div class="mm"><input id="ms1min"><input id="ms1max"></div></div>
+            <div class="fg"><label>N (min/max)</label><div class="mm"><input id="msNmin"><input id="msNmax"></div></div>
+            <div class="fg"><label>2 (min/max)</label><div class="mm"><input id="ms2min"><input id="ms2max"></div></div>
+        </div></div>
+        <div class="blk" style="border-color:#7c3aed"><div class="bt" style="color:#7c3aed">İLK YARI ORANLARI</div><div class="frow">
+            <div class="fg"><label>1 (min/max)</label><div class="mm"><input id="iy1min"><input id="iy1max"></div></div>
+            <div class="fg"><label>N (min/max)</label><div class="mm"><input id="iyNmin"><input id="iyNmax"></div></div>
+            <div class="fg"><label>2 (min/max)</label><div class="mm"><input id="iy2min"><input id="iy2max"></div></div>
+        </div></div>
+        <div class="blk" style="border-color:var(--green)"><div class="bt" style="color:var(--green)">MT ORANLARI</div><div class="frow">
+            <div class="fg"><label>1 (min/max)</label><div class="mm"><input id="mt1min"><input id="mt1max"></div></div>
+            <div class="fg"><label>N (min/max)</label><div class="mm"><input id="mtNmin"><input id="mtNmax"></div></div>
+            <div class="fg"><label>2 (min/max)</label><div class="mm"><input id="mt2min"><input id="mt2max"></div></div>
+        </div></div>
+        <button class="secondary" onclick="render()">FİLTRELE</button>
+    </div>
+
+    <button class="copy" onclick="kopyala()">📋 SONUCU KOPYALA</button>
     <div id="stats"></div>
     <div id="out"></div>
 </div>
 
 <script>
-let exportText = "";
+let allLeagues = [], exportText = "";
 
 function parseData(line){
     let fields = line.split('\t').map(s=>s.trim());
@@ -54,70 +89,70 @@ function parseData(line){
     let htScore = htM ? htM[1] : null;
     let ft=null, ht=null, mt=null;
     if(odds.length>=3) ft = odds.slice(0,3);
-    if(htScore){
-        if(odds.length>=6) ht = odds.slice(3,6);
-        if(odds.length>=9) mt = odds.slice(6,9);
-    } else {
-        if(odds.length>=6) mt = odds.slice(3,6);
-    }
-    return {score, htScore, ft, ht, mt};
+    if(htScore){ if(odds.length>=6) ht=odds.slice(3,6); if(odds.length>=9) mt=odds.slice(6,9); }
+    else { if(odds.length>=6) mt=odds.slice(3,6); }
+    // maç sonucu (skordan)
+    let res=null;
+    if(score){ let s=score.split('-').map(Number); res = s[0]>s[1]?'1':(s[0]<s[1]?'2':'N'); }
+    return {score, res, htScore, ft, ht, mt};
 }
-
+function timeToMin(t){ let m=t&&t.match(/(\d{1,2})h(\d{2})/); return m? (+m[1])*60+(+m[2]) : null; }
 function favIdx(o){ if(!o) return -1; let m=Math.min(o[0],o[1],o[2]); return o.indexOf(m); }
-function oddsHtml(o){
-    if(!o) return '<span class="none">-</span>';
-    let f=favIdx(o), lbl=['1','N','2'];
-    return o.map((v,i)=>`<span class="${i===f?'fav':''}">${lbl[i]} ${v.toFixed(2)}</span>`).join(' ');
-}
+function oddsHtml(o){ if(!o) return '<span class="none">-</span>'; let f=favIdx(o),l=['1','N','2']; return o.map((v,i)=>`<span class="${i===f?'fav':''}">${l[i]} ${v.toFixed(2)}</span>`).join(' '); }
 
 function düzenle(){
     let lines = document.getElementById('raw').value.split(/\r?\n/);
-    let leagues = [];   // {name, count, matches:[]}
-    let cur = null, pendingTime = '', pendingTeam = '';
+    allLeagues=[]; let cur=null, pTime='', pTeam='';
     lines.forEach(raw=>{
-        let line = raw.replace(/\s+$/,'');   // sağ boşlukları at
-        let t = line.trim();
-        if(!t) return;
-        let lm = t.match(/^(.+?)\s*\((\d+)\)$/);          // Lig (sayı)
-        let tm = t.match(/^(\d{1,2})h(\d{2})$/);          // saat
-        let hasOdds = /\d+,\d+/.test(t);                  // veri satırı (oran var)
-        if(lm && !hasOdds){
-            cur = {name:lm[1].trim(), count:lm[2], matches:[]};
-            leagues.push(cur);
-        } else if(tm){
-            pendingTime = t;
-        } else if(hasOdds){
-            if(!cur){ cur={name:'DİĞER',count:'',matches:[]}; leagues.push(cur); }
-            let d = parseData(line);
-            cur.matches.push({time:pendingTime, team:pendingTeam, ...d});
-        } else {
-            pendingTeam = t;   // takım satırı (ya da başlık, zararsız)
-        }
+        let line=raw.replace(/\s+$/,''), t=line.trim(); if(!t) return;
+        let lm=t.match(/^(.+?)\s*\((\d+)\)$/), tm=t.match(/^(\d{1,2})h(\d{2})$/), hasOdds=/\d+,\d+/.test(t);
+        if(lm && !hasOdds){ cur={name:lm[1].trim(),matches:[]}; allLeagues.push(cur); }
+        else if(tm){ pTime=t; }
+        else if(hasOdds){ if(!cur){cur={name:'DİĞER',matches:[]};allLeagues.push(cur);} cur.matches.push({time:pTime,team:pTeam,...parseData(line)}); }
+        else { pTeam=t; }
     });
+    // lig dropdown doldur
+    let sel=document.getElementById('f_lig'); sel.innerHTML='<option value="ALL">HEPSİ</option>';
+    allLeagues.forEach(l=>{ let o=document.createElement('option'); o.value=l.name; o.textContent=l.name+' ('+l.matches.length+')'; sel.appendChild(o); });
+    render();
+}
 
-    let totalM = leagues.reduce((a,l)=>a+l.matches.length,0);
-    document.getElementById('stats').innerText = `${leagues.length} lig  •  ${totalM} maç düzenlendi`;
+function num(id,def){ let v=parseFloat(document.getElementById(id).value.replace(',','.')); return isNaN(v)?def:v; }
+function inRange(o,i,min,max){ if(o==null) return (min<=0 && max>=99); return o[i]>=min && o[i]<=max; }
 
-    let html='', exp=['LIG | SAAT | MAC | SKOR | MS(1/N/2) | IY[skor](1/N/2) | MT(1/N/2)'];
-    leagues.forEach(l=>{
-        if(!l.matches.length) return;
-        html += `<div class="league"><div class="league-head"><span>${l.name}</span><span>${l.matches.length} maç</span></div>
-        <table><thead><tr><th>Saat</th><th>Maç</th><th>Skor</th><th>Maç Sonucu</th><th>İlk Yarı</th><th>MT</th></tr></thead><tbody>`;
+function render(){
+    if(!allLeagues.length){ document.getElementById('out').innerHTML=''; document.getElementById('stats').innerText='Önce bülteni yapıştır + DÜZENLE.'; return; }
+    let fl=document.getElementById('f_lig').value;
+    let smin=timeToMin((document.getElementById('f_smin').value||'0h00').replace(/^(\d{1,2})$/,'$1h00'))??0;
+    let smax=timeToMin((document.getElementById('f_smax').value||'24h00').replace(/^(\d{1,2})$/,'$1h00'))??1440;
+    let res=document.getElementById('f_res').value;
+    let R={ms1:[num('ms1min',0),num('ms1max',99)],msN:[num('msNmin',0),num('msNmax',99)],ms2:[num('ms2min',0),num('ms2max',99)],
+            iy1:[num('iy1min',0),num('iy1max',99)],iyN:[num('iyNmin',0),num('iyNmax',99)],iy2:[num('iy2min',0),num('iy2max',99)],
+            mt1:[num('mt1min',0),num('mt1max',99)],mtN:[num('mtNmin',0),num('mtNmax',99)],mt2:[num('mt2min',0),num('mt2max',99)]};
+
+    let html='', exp=['LIG | SAAT | MAC | SKOR | MS(1/N/2) | IY(1/N/2) | MT(1/N/2)'], total=0;
+    allLeagues.forEach(l=>{
+        if(fl!=='ALL' && l.name!==fl) return;
+        let rows='';
         l.matches.forEach(m=>{
-            html += `<tr>
-                <td class="time">${m.time||'-'}</td>
-                <td class="match">${m.team||'-'}</td>
-                <td class="score">${m.score||'?'}</td>
+            if(res!=='ALL'){ if(res==='PEND'){ if(m.res) return; } else if(m.res!==res) return; }
+            let tmn=timeToMin(m.time);
+            if(tmn!=null && (tmn<smin||tmn>smax)) return;
+            if(!inRange(m.ft,0,R.ms1[0],R.ms1[1])||!inRange(m.ft,1,R.msN[0],R.msN[1])||!inRange(m.ft,2,R.ms2[0],R.ms2[1])) return;
+            if(!inRange(m.ht,0,R.iy1[0],R.iy1[1])||!inRange(m.ht,1,R.iyN[0],R.iyN[1])||!inRange(m.ht,2,R.iy2[0],R.iy2[1])) return;
+            if(!inRange(m.mt,0,R.mt1[0],R.mt1[1])||!inRange(m.mt,1,R.mtN[0],R.mtN[1])||!inRange(m.mt,2,R.mt2[0],R.mt2[1])) return;
+            total++;
+            rows+=`<tr><td class="time">${m.time||'-'}</td><td class="match">${m.team||'-'}</td><td class="score">${m.score||'?'}</td>
                 <td class="odds">${oddsHtml(m.ft)}</td>
                 <td class="odds">${m.htScore?`<span class="htsc">[${m.htScore}]</span> `:''}${oddsHtml(m.ht)}</td>
-                <td class="odds">${oddsHtml(m.mt)}</td>
-            </tr>`;
+                <td class="odds">${oddsHtml(m.mt)}</td></tr>`;
             let f=o=>o?o.map(v=>v.toFixed(2)).join('/'):'-';
-            exp.push(`${l.name} | ${m.time||''} | ${m.team||''} | ${m.score||'?'} | ${f(m.ft)} | ${m.htScore?'['+m.htScore+'] ':''}${f(m.ht)} | ${f(m.mt)}`);
+            exp.push(`${l.name} | ${m.time||''} | ${m.team||''} | ${m.score||'?'} | ${f(m.ft)} | ${f(m.ht)} | ${f(m.mt)}`);
         });
-        html += `</tbody></table></div>`;
+        if(rows) html+=`<div class="league"><div class="league-head"><span>${l.name}</span></div><table><thead><tr><th>Saat</th><th>Maç</th><th>Skor</th><th>Maç Sonucu</th><th>İlk Yarı</th><th>MT</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     });
-    document.getElementById('out').innerHTML = html || '<div style="color:var(--muted);padding:14px;">Veri bulunamadı — ham bülteni yapıştır.</div>';
+    document.getElementById('stats').innerText = `Filtreye uyan: ${total} maç`;
+    document.getElementById('out').innerHTML = html || '<div style="color:var(--muted);padding:14px;">Filtreye uyan maç yok.</div>';
     exportText = exp.join('\n');
 }
 
