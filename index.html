@@ -74,7 +74,7 @@
 </div>
 
 <script>
-let rounds = [], exportText = "", teamHist = {};
+let rounds = [], exportText = "", teamHist = {}, streakInfo = new Map();
 const roundRe = /^(\d+)\.\s*Round/i;
 const mRe = /^(.+?)\s+-\s+(.+?)\s+(?:(\d+):(\d+)\s+)?(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)(?:\s+([\d.]+))?\s*$/;
 
@@ -104,6 +104,7 @@ function düzenle(){
         (teamHist[m.home]=teamHist[m.home]||[]).push({p:hp, gf:m.hg, ga:m.ag});
         (teamHist[m.away]=teamHist[m.away]||[]).push({p:ap, gf:m.ag, ga:m.hg});
     }));
+    streakInfo = computeStreaks();
 
     let sel = document.getElementById('f_round'); sel.innerHTML = '<option value="ALL">HEPSİ</option>';
     rounds.forEach(r=>{ let o=document.createElement('option'); o.value=r.no; o.textContent='Round '+r.no+' ('+r.matches.length+')'; sel.appendChild(o); });
@@ -114,28 +115,40 @@ function num(id,d){ let v=parseFloat((document.getElementById(id).value||'').rep
 function pts(team){ let a=teamHist[team]||[]; let sp=x=>x.reduce((p,c)=>p+c.p,0); return {t:sp(a), s5:sp(a.slice(0,5)), s10:sp(a.slice(0,10)), n:a.length}; }
 function last5(team){ let a=(teamHist[team]||[]).slice(0,5); return { pts:a.reduce((s,x)=>s+x.p,0), gf:a.reduce((s,x)=>s+x.gf,0), ga:a.reduce((s,x)=>s+x.ga,0), n:a.length }; }
 
-// === BERABERLİK UYARISI — son 5'te hiç berabere kalmamış + az atmış + az yemiş iki takım ===
-const DRAW_WIN = 5;   // analiz penceresi: son 5 maç
-const GF_MAX = 6;     // son 5'te en fazla bu kadar gol atmış (≈1.2/maç)
-const GA_MAX = 6;     // son 5'te en fazla bu kadar gol yemiş
-function teamForm(team){
-    let a = (teamHist[team]||[]).slice(0,DRAW_WIN);
-    return { n:a.length, gf:a.reduce((s,x)=>s+x.gf,0), ga:a.reduce((s,x)=>s+x.ga,0), draws:a.filter(x=>x.gf===x.ga).length };
+// === BERABERLİK SERİSİ UYARISI ===
+// Bir takım üst üste 2 maç berabere kalmayınca, 3. maçtan 6. maça kadar "beraberlik gecikti" uyarısı.
+// Araya bir beraberlik girerse seri sıfırlanır.
+const STREAK_MIN = 2, STREAK_MAX = 5;   // gelen maç 3.–6. sıradaysa uyar → önceki seri 2..5 arası
+const inWin = s => s>=STREAK_MIN && s<=STREAK_MAX;
+// Her maç için, o maça GİRERKEN takımların üst üste kaç maçtır berabere kalmadığını (kronolojik) hesapla.
+function computeStreaks(){
+    let chrono = [];                              // eski → yeni (round listesi yeni→eski geldiği için ters)
+    for(let i=rounds.length-1; i>=0; i--) chrono.push(...rounds[i].matches);
+    let streak = {}, info = new Map();
+    chrono.forEach(m=>{
+        let sh = streak[m.home]||0, sa = streak[m.away]||0;
+        info.set(m, {sh, sa});                    // maça girerken (bu maç dahil değil) seri
+        if(m.res!=null){                          // oynanmışsa seriyi güncelle
+            streak[m.home] = (m.res==='X') ? 0 : sh+1;
+            streak[m.away] = (m.res==='X') ? 0 : sa+1;
+        }
+    });
+    return info;
 }
-function drawWarn(home, away){
-    let A = teamForm(home), B = teamForm(away);
-    if(A.n<DRAW_WIN || B.n<DRAW_WIN) return {ok:false, warn:false, A, B, detail:'yetersiz geçmiş maç'};
-    let cond = t => t.draws===0 && t.gf<=GF_MAX && t.ga<=GA_MAX;   // berabere kalmamış + az atmış + az yemiş
-    let warn = cond(A) && cond(B);
-    return {ok:true, warn, A, B,
-        detail:`${home} son5: ${A.gf} at/${A.ga} yed/${A.draws} berabere · ${away} son5: ${B.gf} at/${B.ga} yed/${B.draws} berabere`};
+function drawWarn(m){
+    let inf = streakInfo.get(m);
+    if(!inf) return {ok:false, warn:false, detail:'veri yok'};
+    let warn = inWin(inf.sh) || inWin(inf.sa);
+    let tag = s => inWin(s) ? `<b>${s}</b>✓` : s;
+    return {ok:true, warn, sh:inf.sh, sa:inf.sa,
+        detail:`${m.home}: ${tag(inf.sh)} maçtır berabere yok · ${m.away}: ${tag(inf.sa)} maçtır berabere yok`};
 }
 // Geçmiş (oynanmış) maçlarda: uyarı çıkan maçların gerçekte kaçı X bitmiş?
 function drawBacktest(){
     let played=0, X=0, pass=0, passX=0;
     rounds.forEach(r=>r.matches.forEach(m=>{
         if(!m.res) return; played++; if(m.res==='X') X++;
-        let d=drawWarn(m.home,m.away);
+        let d=drawWarn(m);
         if(d.ok && d.warn){ pass++; if(m.res==='X') passX++; }
     }));
     return {played, X, base:played?X/played:0, pass, passX, rate:pass?passX/pass:0};
@@ -161,7 +174,7 @@ function render(){
             // filtreye uyuyor mu? (gizlemiyoruz, vurguluyoruz)
             let resOk = (fres==='ALL') ? true : (fres==='PEND' ? !m.res : m.res===fres);
             let oddOk = m.o[0]>=o1[0]&&m.o[0]<=o1[1]&&m.o[1]>=oX[0]&&m.o[1]<=oX[1]&&m.o[2]>=o2[0]&&m.o[2]<=o2[1];
-            let dw = drawWarn(m.home, m.away);
+            let dw = drawWarn(m);
             let drawOk = (fdraw==='ALL') ? true : (dw.ok && dw.warn);
             let hlRow = filterActive && resOk && oddOk && drawOk;
             if(hlRow) hlCount++;
