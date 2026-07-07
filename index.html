@@ -71,6 +71,7 @@
             <div class="fg"><label>Oran 1 (min/max)</label><div class="mm"><input id="o1min"><input id="o1max"></div></div>
             <div class="fg"><label>Oran X (min/max)</label><div class="mm"><input id="oXmin"><input id="oXmax"></div></div>
             <div class="fg"><label>Oran 2 (min/max)</label><div class="mm"><input id="o2min"><input id="o2max"></div></div>
+            <div class="fg"><label>Görünüm</label><label style="display:flex;align-items:center;gap:5px;font-size:12px;padding:6px 0;cursor:pointer"><input type="checkbox" id="f_only" onchange="render()" style="width:auto"> 🔒 sadece seçilenleri göster</label></div>
         </div>
         <button class="secondary" onclick="render()">FİLTRELE</button>
     </div>
@@ -168,11 +169,12 @@ function render(){
     let sAfter=Math.max(1,Math.round(num('s_after',2))), sCount=Math.max(1,Math.round(num('s_count',4)));
     SMIN=sAfter; SMAX=sAfter+sCount-1;
     let fwin=document.getElementById('f_winners').checked;
+    let fOnly=document.getElementById('f_only').checked;
     let o1=[num('o1min',0),num('o1max',999)], oX=[num('oXmin',0),num('oXmax',999)], o2=[num('o2min',0),num('o2max',999)];
     // filtre aktif mi? (sonuç seçili ya da bir oran aralığı girilmiş ya da beraberlik filtresi)
     let oddsActive = o1[0]>0||o1[1]<999||oX[0]>0||oX[1]<999||o2[0]>0||o2[1]<999;
     let filterActive = (fres!=='ALL') || oddsActive || (fdraw!=='ALL');
-    let html='', exp=['EV_TAKIM | DEP_TAKIM | SONUC | EV_S5_PUAN | EV_S5_ATTIGI | EV_S5_YEDIGI | DEP_S5_PUAN | DEP_S5_ATTIGI | DEP_S5_YEDIGI'], hlCount=0, shown=0;
+    let html='', exp=['EV_TAKIM | DEP_TAKIM | SONUC | EV_S5_PUAN | EV_S5_ATTIGI | EV_S5_YEDIGI | DEP_S5_PUAN | DEP_S5_ATTIGI | DEP_S5_YEDIGI'], hlCount=0, shown=0, disp=0;
 
     rounds.forEach(r=>{
         if(fr!=='ALL' && r.no!==fr) return;   // round yine filtreler (hepsi = tümü)
@@ -191,6 +193,9 @@ function render(){
             if(hlRow) hlCount++;
             if(hlRow || !filterActive){ let h5=last5(m.home), a5=last5(m.away);
                 exp.push(`${m.home} | ${m.away} | ${m.res||'-'} | ${h5.pts} | ${h5.gf} | ${h5.ga} | ${a5.pts} | ${a5.gf} | ${a5.ga}`); }
+            // "sadece seçilenleri göster" açıksa ve filtre aktifse, uymayan satırı gizle
+            if(fOnly && filterActive && !hlRow) return;
+            disp++;
             let hp=pts(m.home), ap=pts(m.away);
             let ptsHtml = `<div class="pts">${m.home}: <b>T${hp.t}</b> · 5:${hp.s5} · 10:${hp.s10} &nbsp;|&nbsp; ${m.away}: <b>T${ap.t}</b> · 5:${ap.s5} · 10:${ap.s10}</div>`;
             // Beraberlik uyarısı rozeti + (oynanmışsa) gerçekleşen sonuç işareti
@@ -212,7 +217,7 @@ function render(){
         ? `  •  📉 GEÇMİŞ TESTİ: uyarı çıkan ${bt.pass} maçın %${(100*bt.rate).toFixed(0)}'ı (${bt.passX}/${bt.pass}) gerçekten X bitmiş — taban X oranı %${(100*bt.base).toFixed(0)}`
         : `  •  📉 GEÇMİŞ TESTİ: uyarı çıkan oynanmış maç yok`;
     document.getElementById('stats').innerText = (filterActive
-        ? `🟢 Vurgulanan: ${hlCount} maç  •  (toplam ${shown} maç listede)`
+        ? `🟢 Vurgulanan: ${hlCount} maç` + (fOnly?`  •  gösterilen: ${disp}`:``) + `  •  (toplam ${shown} maç)`
         : `Toplam ${shown} maç listede`) + btTxt;
     document.getElementById('out').innerHTML = html || '<div style="color:var(--muted);padding:14px;">Filtreye uyan maç yok.</div>';
     exportText = exp.join('\n');
