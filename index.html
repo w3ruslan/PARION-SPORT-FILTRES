@@ -37,6 +37,9 @@
     td.od.hl{background:var(--hl);font-weight:800;border-radius:4px;box-shadow:inset 0 0 0 1px var(--hlb);}
     tr:hover td{background:#fafcff;}
     tr:hover td.od.hl{background:#fdeeb0;}
+    tr.row-hl td{background:#e8f6ee !important;}
+    tr.row-hl td.match{box-shadow:inset 4px 0 0 var(--green);}
+    tr.row-hl td.od.hl{background:#d7f0df !important;}
 </style>
 </head>
 <body>
@@ -95,25 +98,33 @@ function render(){
     if(!rounds.length){ document.getElementById('out').innerHTML=''; document.getElementById('stats').innerText='Önce bülteni yapıştır + DÜZENLE.'; return; }
     let fr=document.getElementById('f_round').value, fres=document.getElementById('f_res').value;
     let o1=[num('o1min',0),num('o1max',999)], oX=[num('oXmin',0),num('oXmax',999)], o2=[num('o2min',0),num('o2max',999)];
-    let html='', exp=['ROUND | MAC | SKOR | 1 | X | 2 | SONUC | TARIH'], total=0;
+    // filtre aktif mi? (sonuç seçili ya da bir oran aralığı girilmiş)
+    let oddsActive = o1[0]>0||o1[1]<999||oX[0]>0||oX[1]<999||o2[0]>0||o2[1]<999;
+    let filterActive = (fres!=='ALL') || oddsActive;
+    let html='', exp=['ROUND | MAC | SKOR | 1 | X | 2 | SONUC | TARIH'], hlCount=0, shown=0;
 
     rounds.forEach(r=>{
-        if(fr!=='ALL' && r.no!==fr) return;
+        if(fr!=='ALL' && r.no!==fr) return;   // round yine filtreler (hepsi = tümü)
         let rows='';
         r.matches.forEach(m=>{
-            if(fres!=='ALL'){ if(fres==='PEND'){ if(m.res) return; } else if(m.res!==fres) return; }
-            if(m.o[0]<o1[0]||m.o[0]>o1[1]||m.o[1]<oX[0]||m.o[1]>oX[1]||m.o[2]<o2[0]||m.o[2]>o2[1]) return;
-            total++;
+            shown++;
             // vurgulanacak oran: sonuç (skordan); yoksa favori (en düşük)
             let hi = m.res ? ({'1':0,'X':1,'2':2})[m.res] : m.o.indexOf(Math.min(...m.o));
             let od = m.o.map((v,i)=>`<td class="od${i===hi?' hl':''}">${v.toFixed(2)}</td>`).join('');
-            rows += `<tr><td class="match">${m.home} - ${m.away}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
-            exp.push(`${r.no} | ${m.home} - ${m.away} | ${m.score||'?'} | ${m.o[0]} | ${m.o[1]} | ${m.o[2]} | ${m.res||'-'} | ${m.date}`);
+            // filtreye uyuyor mu? (gizlemiyoruz, vurguluyoruz)
+            let resOk = (fres==='ALL') ? true : (fres==='PEND' ? !m.res : m.res===fres);
+            let oddOk = m.o[0]>=o1[0]&&m.o[0]<=o1[1]&&m.o[1]>=oX[0]&&m.o[1]<=oX[1]&&m.o[2]>=o2[0]&&m.o[2]<=o2[1];
+            let hlRow = filterActive && resOk && oddOk;
+            if(hlRow) hlCount++;
+            if(hlRow || !filterActive){ exp.push(`${r.no} | ${m.home} - ${m.away} | ${m.score||'?'} | ${m.o[0]} | ${m.o[1]} | ${m.o[2]} | ${m.res||'-'} | ${m.date}`); }
+            rows += `<tr${hlRow?' class="row-hl"':''}><td class="match">${m.home} - ${m.away}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
         });
         if(rows) html += `<div class="round"><div class="round-head"><span>${r.no}. Round</span></div>
             <table><thead><tr><th>Maç</th><th>Skor</th><th>1</th><th>X</th><th>2</th><th>Tarih</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     });
-    document.getElementById('stats').innerText = `Filtreye uyan: ${total} maç`;
+    document.getElementById('stats').innerText = filterActive
+        ? `🟢 Vurgulanan: ${hlCount} maç  •  (toplam ${shown} maç listede)`
+        : `Toplam ${shown} maç listede`;
     document.getElementById('out').innerHTML = html || '<div style="color:var(--muted);padding:14px;">Filtreye uyan maç yok.</div>';
     exportText = exp.join('\n');
 }
