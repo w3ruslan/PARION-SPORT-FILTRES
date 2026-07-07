@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Parion Sport - Filtre</title>
+<title>Bülten Filtre</title>
 <style>
-    :root{--bg:#eef1f6;--panel:#fff;--panel2:#f7f9fc;--border:#dde2ea;--text:#1f2a37;--muted:#6b7585;--primary:#2563eb;--primary2:#1d4ed8;--gold:#b7791f;--green:#16a34a;}
+    :root{--bg:#eef1f6;--panel:#fff;--panel2:#f7f9fc;--border:#dde2ea;--text:#1f2a37;--muted:#6b7585;--primary:#2563eb;--primary2:#1d4ed8;--gold:#b7791f;--green:#16a34a;--hl:#fff6c8;--hlb:#e0a106;}
     *{box-sizing:border-box;}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);padding:22px;margin:0;line-height:1.4;}
-    .wrap{max-width:1300px;margin:auto;border:1px solid var(--border);padding:24px;background:var(--panel);box-shadow:0 10px 30px rgba(31,42,55,.08);border-radius:14px;}
+    .wrap{max-width:1050px;margin:auto;border:1px solid var(--border);padding:24px;background:var(--panel);box-shadow:0 10px 30px rgba(31,42,55,.08);border-radius:14px;}
     h2.title{text-align:center;font-weight:700;border-bottom:2px solid var(--primary);padding-bottom:12px;margin:0 0 16px;font-size:1.4em;}
     h4{margin:0 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;}
     textarea{width:100%;height:150px;background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:12px;font-size:12px;border-radius:8px;resize:vertical;font-family:'SF Mono','Consolas','Courier New',monospace;}
@@ -23,53 +23,37 @@
     .fg{display:flex;flex-direction:column;gap:4px;}
     .fg label{font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600;}
     .fg .mm{display:flex;gap:4px;}
-    .fg .mm input{width:56px;}
-    .blk{border-left:3px solid var(--primary);padding-left:10px;margin-top:10px;}
-    .blk .bt{font-size:11px;font-weight:700;color:var(--primary);margin-bottom:4px;}
+    .fg .mm input{width:60px;}
     #stats{background:var(--panel2);padding:12px;border-radius:10px;text-align:center;font-weight:600;border:1px solid var(--border);margin:14px 0;}
-    .league{margin-top:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-    .league-head{background:var(--primary);color:#fff;padding:8px 14px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;}
-    table{width:100%;border-collapse:collapse;font-size:12px;}
-    th{background:var(--panel2);color:var(--muted);text-transform:uppercase;font-size:10px;padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);}
-    td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:center;}
-    td.time{color:var(--gold);font-weight:700;width:52px;}
-    td.match{text-align:left;font-weight:600;min-width:180px;}
-    td.score{font-family:'SF Mono','Consolas',monospace;font-weight:700;color:var(--gold);width:44px;}
-    .odds{font-family:'SF Mono','Consolas',monospace;white-space:nowrap;}
-    .fav{color:var(--green);font-weight:800;}
-    .htsc{color:var(--muted);font-size:10px;}
-    .none{color:#cbd5e1;}
+    .round{margin-top:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+    .round-head{background:var(--primary);color:#fff;padding:8px 14px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th{background:var(--panel2);color:var(--muted);text-transform:uppercase;font-size:10px;padding:7px 8px;text-align:center;border-bottom:1px solid var(--border);}
+    td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:center;}
+    td.match{text-align:left;font-weight:600;min-width:220px;}
+    td.score{font-family:'SF Mono','Consolas',monospace;font-weight:700;color:var(--gold);width:48px;}
+    td.date{color:var(--muted);font-size:11px;width:60px;}
+    td.od{font-family:'SF Mono','Consolas',monospace;width:66px;}
+    td.od.hl{background:var(--hl);font-weight:800;border-radius:4px;box-shadow:inset 0 0 0 1px var(--hlb);}
     tr:hover td{background:#fafcff;}
+    tr:hover td.od.hl{background:#fdeeb0;}
 </style>
 </head>
 <body>
 <div class="wrap">
-    <h2 class="title">📋 PARION SPORT — BÜLTEN FİLTRE</h2>
+    <h2 class="title">⚽ BÜLTEN FİLTRE</h2>
     <h4>Bülteni buraya yapıştır:</h4>
-    <textarea id="raw" placeholder="L1 McDonald's (3) ... yapıştır"></textarea>
+    <textarea id="raw" placeholder="38. Round ... Villarreal - Atl. Madrid  5:1  2.54  3.84  2.55  24.05. ..."></textarea>
     <button onclick="düzenle()">📊 DÜZENLE</button>
 
     <div class="fbox">
         <div class="frow">
-            <div class="fg"><label>Lig</label><select id="f_lig" onchange="render()"><option value="ALL">HEPSİ</option></select></div>
-            <div class="fg"><label>Saat (min – max)</label><div class="mm"><input id="f_smin" placeholder="0" style="width:56px"><input id="f_smax" placeholder="24" style="width:56px"></div></div>
-            <div class="fg"><label>Skor</label><select id="f_res"><option value="ALL">HEPSİ</option><option value="1">1 bitenler</option><option value="N">Berabere</option><option value="2">2 bitenler</option><option value="PEND">Oynanmamış</option></select></div>
+            <div class="fg"><label>Round (hafta)</label><select id="f_round" onchange="render()"><option value="ALL">HEPSİ</option></select></div>
+            <div class="fg"><label>Sonuç</label><select id="f_res" onchange="render()"><option value="ALL">HEPSİ</option><option value="1">1 (ev) bitenler</option><option value="X">Berabere</option><option value="2">2 (dep) bitenler</option><option value="PEND">Oynanmamış</option></select></div>
+            <div class="fg"><label>Oran 1 (min/max)</label><div class="mm"><input id="o1min"><input id="o1max"></div></div>
+            <div class="fg"><label>Oran X (min/max)</label><div class="mm"><input id="oXmin"><input id="oXmax"></div></div>
+            <div class="fg"><label>Oran 2 (min/max)</label><div class="mm"><input id="o2min"><input id="o2max"></div></div>
         </div>
-        <div class="blk"><div class="bt">MAÇ SONUCU ORANLARI</div><div class="frow">
-            <div class="fg"><label>1 (min/max)</label><div class="mm"><input id="ms1min"><input id="ms1max"></div></div>
-            <div class="fg"><label>N (min/max)</label><div class="mm"><input id="msNmin"><input id="msNmax"></div></div>
-            <div class="fg"><label>2 (min/max)</label><div class="mm"><input id="ms2min"><input id="ms2max"></div></div>
-        </div></div>
-        <div class="blk" style="border-color:#7c3aed"><div class="bt" style="color:#7c3aed">İLK YARI ORANLARI</div><div class="frow">
-            <div class="fg"><label>1 (min/max)</label><div class="mm"><input id="iy1min"><input id="iy1max"></div></div>
-            <div class="fg"><label>N (min/max)</label><div class="mm"><input id="iyNmin"><input id="iyNmax"></div></div>
-            <div class="fg"><label>2 (min/max)</label><div class="mm"><input id="iy2min"><input id="iy2max"></div></div>
-        </div></div>
-        <div class="blk" style="border-color:var(--green)"><div class="bt" style="color:var(--green)">MT ORANLARI</div><div class="frow">
-            <div class="fg"><label>1 (min/max)</label><div class="mm"><input id="mt1min"><input id="mt1max"></div></div>
-            <div class="fg"><label>N (min/max)</label><div class="mm"><input id="mtNmin"><input id="mtNmax"></div></div>
-            <div class="fg"><label>2 (min/max)</label><div class="mm"><input id="mt2min"><input id="mt2max"></div></div>
-        </div></div>
         <button class="secondary" onclick="render()">FİLTRELE</button>
     </div>
 
@@ -79,77 +63,55 @@
 </div>
 
 <script>
-let allLeagues = [], exportText = "";
-
-function parseData(line){
-    let fields = line.split('\t').map(s=>s.trim());
-    let score = /^\d+-\d+$/.test(fields[0]) ? fields[0] : null;
-    let odds = (line.match(/\d+,\d+/g)||[]).map(x=>parseFloat(x.replace(',','.')));
-    let htM = line.match(/\[(\d+:\d+)\]/);
-    let htScore = htM ? htM[1] : null;
-    let ft=null, ht=null, mt=null;
-    if(odds.length>=3) ft = odds.slice(0,3);
-    if(htScore){ if(odds.length>=6) ht=odds.slice(3,6); if(odds.length>=9) mt=odds.slice(6,9); }
-    else { if(odds.length>=6) mt=odds.slice(3,6); }
-    // maç sonucu (skordan)
-    let res=null;
-    if(score){ let s=score.split('-').map(Number); res = s[0]>s[1]?'1':(s[0]<s[1]?'2':'N'); }
-    return {score, res, htScore, ft, ht, mt};
-}
-function timeToMin(t){ let m=t&&t.match(/(\d{1,2})h(\d{2})/); return m? (+m[1])*60+(+m[2]) : null; }
-function favIdx(o){ if(!o) return -1; let m=Math.min(o[0],o[1],o[2]); return o.indexOf(m); }
-function oddsHtml(o){ if(!o) return '<span class="none">-</span>'; let f=favIdx(o),l=['1','N','2']; return o.map((v,i)=>`<span class="${i===f?'fav':''}">${l[i]} ${v.toFixed(2)}</span>`).join(' '); }
+let rounds = [], exportText = "";
+const roundRe = /^(\d+)\.\s*Round/i;
+const mRe = /^(.+?)\s+-\s+(.+?)\s+(?:(\d+):(\d+)\s+)?(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)(?:\s+([\d.]+))?\s*$/;
 
 function düzenle(){
     let lines = document.getElementById('raw').value.split(/\r?\n/);
-    allLeagues=[]; let cur=null, pTime='', pTeam='';
+    rounds = []; let cur = null;
     lines.forEach(raw=>{
-        let line=raw.replace(/\s+$/,''), t=line.trim(); if(!t) return;
-        let lm=t.match(/^(.+?)\s*\((\d+)\)$/), tm=t.match(/^(\d{1,2})h(\d{2})$/), hasOdds=/\d+,\d+/.test(t);
-        if(lm && !hasOdds){ cur={name:lm[1].trim(),matches:[]}; allLeagues.push(cur); }
-        else if(tm){ pTime=t; }
-        else if(hasOdds){ if(!cur){cur={name:'DİĞER',matches:[]};allLeagues.push(cur);} cur.matches.push({time:pTime,team:pTeam,...parseData(line)}); }
-        else { pTeam=t; }
+        let l = raw.replace(/\s+$/,''), t = l.trim(); if(!t) return;
+        let rm = t.match(roundRe);
+        if(rm){ cur = {no:rm[1], matches:[]}; rounds.push(cur); return; }
+        let m = l.match(mRe);
+        if(m){
+            let sc = (m[3]!=null) ? m[3]+':'+m[4] : null;
+            let res = sc ? (+m[3]>+m[4]?'1':(+m[3]<+m[4]?'2':'X')) : null;
+            let match = { home:m[1].trim(), away:m[2].trim(), score:sc, res:res,
+                          o:[parseFloat(m[5]),parseFloat(m[6]),parseFloat(m[7])], date:m[8]||'' };
+            if(!cur){ cur={no:'?',matches:[]}; rounds.push(cur); }
+            cur.matches.push(match);
+        }
     });
-    // lig dropdown doldur
-    let sel=document.getElementById('f_lig'); sel.innerHTML='<option value="ALL">HEPSİ</option>';
-    allLeagues.forEach(l=>{ let o=document.createElement('option'); o.value=l.name; o.textContent=l.name+' ('+l.matches.length+')'; sel.appendChild(o); });
+    let sel = document.getElementById('f_round'); sel.innerHTML = '<option value="ALL">HEPSİ</option>';
+    rounds.forEach(r=>{ let o=document.createElement('option'); o.value=r.no; o.textContent='Round '+r.no+' ('+r.matches.length+')'; sel.appendChild(o); });
     render();
 }
 
-function num(id,def){ let v=parseFloat(document.getElementById(id).value.replace(',','.')); return isNaN(v)?def:v; }
-function inRange(o,i,min,max){ if(o==null) return (min<=0 && max>=99); return o[i]>=min && o[i]<=max; }
+function num(id,d){ let v=parseFloat((document.getElementById(id).value||'').replace(',','.')); return isNaN(v)?d:v; }
 
 function render(){
-    if(!allLeagues.length){ document.getElementById('out').innerHTML=''; document.getElementById('stats').innerText='Önce bülteni yapıştır + DÜZENLE.'; return; }
-    let fl=document.getElementById('f_lig').value;
-    let smin=timeToMin((document.getElementById('f_smin').value||'0h00').replace(/^(\d{1,2})$/,'$1h00'))??0;
-    let smax=timeToMin((document.getElementById('f_smax').value||'24h00').replace(/^(\d{1,2})$/,'$1h00'))??1440;
-    let res=document.getElementById('f_res').value;
-    let R={ms1:[num('ms1min',0),num('ms1max',99)],msN:[num('msNmin',0),num('msNmax',99)],ms2:[num('ms2min',0),num('ms2max',99)],
-            iy1:[num('iy1min',0),num('iy1max',99)],iyN:[num('iyNmin',0),num('iyNmax',99)],iy2:[num('iy2min',0),num('iy2max',99)],
-            mt1:[num('mt1min',0),num('mt1max',99)],mtN:[num('mtNmin',0),num('mtNmax',99)],mt2:[num('mt2min',0),num('mt2max',99)]};
+    if(!rounds.length){ document.getElementById('out').innerHTML=''; document.getElementById('stats').innerText='Önce bülteni yapıştır + DÜZENLE.'; return; }
+    let fr=document.getElementById('f_round').value, fres=document.getElementById('f_res').value;
+    let o1=[num('o1min',0),num('o1max',999)], oX=[num('oXmin',0),num('oXmax',999)], o2=[num('o2min',0),num('o2max',999)];
+    let html='', exp=['ROUND | MAC | SKOR | 1 | X | 2 | SONUC | TARIH'], total=0;
 
-    let html='', exp=['LIG | SAAT | MAC | SKOR | MS(1/N/2) | IY(1/N/2) | MT(1/N/2)'], total=0;
-    allLeagues.forEach(l=>{
-        if(fl!=='ALL' && l.name!==fl) return;
+    rounds.forEach(r=>{
+        if(fr!=='ALL' && r.no!==fr) return;
         let rows='';
-        l.matches.forEach(m=>{
-            if(res!=='ALL'){ if(res==='PEND'){ if(m.res) return; } else if(m.res!==res) return; }
-            let tmn=timeToMin(m.time);
-            if(tmn!=null && (tmn<smin||tmn>smax)) return;
-            if(!inRange(m.ft,0,R.ms1[0],R.ms1[1])||!inRange(m.ft,1,R.msN[0],R.msN[1])||!inRange(m.ft,2,R.ms2[0],R.ms2[1])) return;
-            if(!inRange(m.ht,0,R.iy1[0],R.iy1[1])||!inRange(m.ht,1,R.iyN[0],R.iyN[1])||!inRange(m.ht,2,R.iy2[0],R.iy2[1])) return;
-            if(!inRange(m.mt,0,R.mt1[0],R.mt1[1])||!inRange(m.mt,1,R.mtN[0],R.mtN[1])||!inRange(m.mt,2,R.mt2[0],R.mt2[1])) return;
+        r.matches.forEach(m=>{
+            if(fres!=='ALL'){ if(fres==='PEND'){ if(m.res) return; } else if(m.res!==fres) return; }
+            if(m.o[0]<o1[0]||m.o[0]>o1[1]||m.o[1]<oX[0]||m.o[1]>oX[1]||m.o[2]<o2[0]||m.o[2]>o2[1]) return;
             total++;
-            rows+=`<tr><td class="time">${m.time||'-'}</td><td class="match">${m.team||'-'}</td><td class="score">${m.score||'?'}</td>
-                <td class="odds">${oddsHtml(m.ft)}</td>
-                <td class="odds">${m.htScore?`<span class="htsc">[${m.htScore}]</span> `:''}${oddsHtml(m.ht)}</td>
-                <td class="odds">${oddsHtml(m.mt)}</td></tr>`;
-            let f=o=>o?o.map(v=>v.toFixed(2)).join('/'):'-';
-            exp.push(`${l.name} | ${m.time||''} | ${m.team||''} | ${m.score||'?'} | ${f(m.ft)} | ${f(m.ht)} | ${f(m.mt)}`);
+            // vurgulanacak oran: sonuç (skordan); yoksa favori (en düşük)
+            let hi = m.res ? ({'1':0,'X':1,'2':2})[m.res] : m.o.indexOf(Math.min(...m.o));
+            let od = m.o.map((v,i)=>`<td class="od${i===hi?' hl':''}">${v.toFixed(2)}</td>`).join('');
+            rows += `<tr><td class="match">${m.home} - ${m.away}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
+            exp.push(`${r.no} | ${m.home} - ${m.away} | ${m.score||'?'} | ${m.o[0]} | ${m.o[1]} | ${m.o[2]} | ${m.res||'-'} | ${m.date}`);
         });
-        if(rows) html+=`<div class="league"><div class="league-head"><span>${l.name}</span></div><table><thead><tr><th>Saat</th><th>Maç</th><th>Skor</th><th>Maç Sonucu</th><th>İlk Yarı</th><th>MT</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        if(rows) html += `<div class="round"><div class="round-head"><span>${r.no}. Round</span></div>
+            <table><thead><tr><th>Maç</th><th>Skor</th><th>1</th><th>X</th><th>2</th><th>Tarih</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     });
     document.getElementById('stats').innerText = `Filtreye uyan: ${total} maç`;
     document.getElementById('out').innerHTML = html || '<div style="color:var(--muted);padding:14px;">Filtreye uyan maç yok.</div>';
