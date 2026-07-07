@@ -47,6 +47,10 @@
     tr.row-hl td{background:#e8f6ee !important;}
     tr.row-hl td.match{box-shadow:inset 4px 0 0 var(--green);}
     tr.row-hl td.od.hl{background:#d7f0df !important;}
+    tr.row-win td{background:#c9f4d6 !important;}
+    tr.row-win td.match{box-shadow:inset 4px 0 0 #16a34a;}
+    tr.row-loss td{background:#fbe0e0 !important;}
+    tr.row-loss td.match{box-shadow:inset 4px 0 0 #dc2626;}
 </style>
 </head>
 <body>
@@ -61,6 +65,9 @@
             <div class="fg"><label>Round (hafta)</label><select id="f_round" onchange="render()"><option value="ALL">HEPSİ</option></select></div>
             <div class="fg"><label>Sonuç</label><select id="f_res" onchange="render()"><option value="ALL">HEPSİ</option><option value="1">1 (ev) bitenler</option><option value="X">Berabere</option><option value="2">2 (dep) bitenler</option><option value="PEND">Oynanmamış</option></select></div>
             <div class="fg"><label>Beraberlik (MS X)</label><select id="f_draw" onchange="render()"><option value="ALL">HEPSİ</option><option value="warn">⚠️ Beraberlik uyarısı</option></select></div>
+            <div class="fg"><label>Kaç maç sonra başlasın</label><input id="s_after" value="2" onchange="render()" oninput="render()" style="width:70px"></div>
+            <div class="fg"><label>Kaç maç sürsün</label><input id="s_count" value="4" onchange="render()" oninput="render()" style="width:70px"></div>
+            <div class="fg"><label>Kazananlar</label><label style="display:flex;align-items:center;gap:5px;font-size:12px;padding:6px 0;cursor:pointer"><input type="checkbox" id="f_winners" onchange="render()" style="width:auto"> ✅ berabere bitenleri yeşil yap</label></div>
             <div class="fg"><label>Oran 1 (min/max)</label><div class="mm"><input id="o1min"><input id="o1max"></div></div>
             <div class="fg"><label>Oran X (min/max)</label><div class="mm"><input id="oXmin"><input id="oXmax"></div></div>
             <div class="fg"><label>Oran 2 (min/max)</label><div class="mm"><input id="o2min"><input id="o2max"></div></div>
@@ -118,8 +125,8 @@ function last5(team){ let a=(teamHist[team]||[]).slice(0,5); return { pts:a.redu
 // === BERABERLİK SERİSİ UYARISI ===
 // Bir takım üst üste 2 maç berabere kalmayınca, 3. maçtan 6. maça kadar "beraberlik gecikti" uyarısı.
 // Araya bir beraberlik girerse seri sıfırlanır.
-const STREAK_MIN = 2, STREAK_MAX = 5;   // gelen maç 3.–6. sıradaysa uyar → önceki seri 2..5 arası
-const inWin = s => s>=STREAK_MIN && s<=STREAK_MAX;
+let SMIN = 2, SMAX = 5;   // seri penceresi — arayüzden ayarlanır (render içinde güncellenir)
+function inWin(s){ return s>=SMIN && s<=SMAX; }
 // Her maç için, o maça GİRERKEN takımların üst üste kaç maçtır berabere kalmadığını (kronolojik) hesapla.
 function computeStreaks(){
     let chrono = [];                              // eski → yeni (round listesi yeni→eski geldiği için ters)
@@ -157,6 +164,10 @@ function drawBacktest(){
 function render(){
     if(!rounds.length){ document.getElementById('out').innerHTML=''; document.getElementById('stats').innerText='Önce bülteni yapıştır + DÜZENLE.'; return; }
     let fr=document.getElementById('f_round').value, fres=document.getElementById('f_res').value, fdraw=document.getElementById('f_draw').value;
+    // seri penceresi ayarları: N maçtan sonra başla, M maç sürsün → seri N..(N+M-1) arası uyarır
+    let sAfter=Math.max(1,Math.round(num('s_after',2))), sCount=Math.max(1,Math.round(num('s_count',4)));
+    SMIN=sAfter; SMAX=sAfter+sCount-1;
+    let fwin=document.getElementById('f_winners').checked;
     let o1=[num('o1min',0),num('o1max',999)], oX=[num('oXmin',0),num('oXmax',999)], o2=[num('o2min',0),num('o2max',999)];
     // filtre aktif mi? (sonuç seçili ya da bir oran aralığı girilmiş ya da beraberlik filtresi)
     let oddsActive = o1[0]>0||o1[1]<999||oX[0]>0||oX[1]<999||o2[0]>0||o2[1]<999;
@@ -189,7 +200,9 @@ function render(){
                 : (dw.ok
                     ? `<span class="dsb">Uyarı yok${rc}</span><span class="dsdetail">${dw.detail}</span>`
                     : `<span class="dsb">— ${dw.detail}</span>`);
-            rows += `<tr${hlRow?' class="row-hl"':''}><td class="match">${m.home} - ${m.away}${ptsHtml}${dsHtml}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
+            // satır rengi: kazananlar açık + uyarı verilmiş + oynanmış → berabereyse yeşil, değilse kırmızı; yoksa filtre vurgusu
+            let cls = (fwin && dw.warn && m.res) ? (m.res==='X' ? 'row-win' : 'row-loss') : (hlRow ? 'row-hl' : '');
+            rows += `<tr${cls?` class="${cls}"`:''}><td class="match">${m.home} - ${m.away}${ptsHtml}${dsHtml}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
         });
         if(rows) html += `<div class="round"><div class="round-head"><span>${r.no}. Round</span></div>
             <table><thead><tr><th>Maç</th><th>Skor</th><th>1</th><th>X</th><th>2</th><th>Tarih</th></tr></thead><tbody>${rows}</tbody></table></div>`;
