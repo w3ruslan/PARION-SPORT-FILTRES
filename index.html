@@ -33,6 +33,11 @@
     td.match{text-align:left;font-weight:600;min-width:240px;}
     .pts{font-size:10px;color:var(--muted);font-weight:400;margin-top:2px;}
     .pts b{color:var(--primary);}
+    .dsb{display:inline-block;margin-top:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#eef2ff;color:#475569;border:1px solid #dbe3f5;}
+    .dsb.hot{background:#dcfce7;color:#15803d;border-color:#86efac;}
+    .dsb.dq{background:#fef2f2;color:#b91c1c;border-color:#fecaca;}
+    .dsb .rc{margin-left:5px;font-weight:800;}
+    .dsdetail{display:block;font-size:9px;color:var(--muted);margin-top:2px;font-weight:400;}
     td.score{font-family:'SF Mono','Consolas',monospace;font-weight:700;color:var(--gold);width:48px;}
     td.date{color:var(--muted);font-size:11px;width:60px;}
     td.od{font-family:'SF Mono','Consolas',monospace;width:66px;}
@@ -55,6 +60,7 @@
         <div class="frow">
             <div class="fg"><label>Round (hafta)</label><select id="f_round" onchange="render()"><option value="ALL">HEPSİ</option></select></div>
             <div class="fg"><label>Sonuç</label><select id="f_res" onchange="render()"><option value="ALL">HEPSİ</option><option value="1">1 (ev) bitenler</option><option value="X">Berabere</option><option value="2">2 (dep) bitenler</option><option value="PEND">Oynanmamış</option></select></div>
+            <div class="fg"><label>Beraberlik (MS X)</label><select id="f_draw" onchange="render()"><option value="ALL">HEPSİ</option><option value="70">🎯 70+ puan</option></select></div>
             <div class="fg"><label>Oran 1 (min/max)</label><div class="mm"><input id="o1min"><input id="o1max"></div></div>
             <div class="fg"><label>Oran X (min/max)</label><div class="mm"><input id="oXmin"><input id="oXmax"></div></div>
             <div class="fg"><label>Oran 2 (min/max)</label><div class="mm"><input id="o2min"><input id="o2max"></div></div>
@@ -108,13 +114,42 @@ function num(id,d){ let v=parseFloat((document.getElementById(id).value||'').rep
 function pts(team){ let a=teamHist[team]||[]; let sp=x=>x.reduce((p,c)=>p+c.p,0); return {t:sp(a), s5:sp(a.slice(0,5)), s10:sp(a.slice(0,10)), n:a.length}; }
 function last5(team){ let a=(teamHist[team]||[]).slice(0,5); return { pts:a.reduce((s,x)=>s+x.p,0), gf:a.reduce((s,x)=>s+x.gf,0), ga:a.reduce((s,x)=>s+x.ga,0), n:a.length }; }
 
+// === BERABERLİK İHTİMALİ PUANLAMASI (MS X) — kullanıcının algoritması, birebir ===
+function drawScore(home, away){
+    let A = teamHist[home]||[], B = teamHist[away]||[];
+    if(A.length<3 || B.length<3) return {ok:false, dq:false, score:0, detail:'yetersiz geçmiş maç'};
+    // KURAL 1 — Kaos filtresi: iki takımdan birinin geçmişinde 4+ gollü maç varsa DİSKALİFİYE
+    if(A.concat(B).some(x=>x.gf+x.ga>=4)) return {ok:false, dq:true, score:0, detail:'geçmişte 4+ gollü maç var → kaos'};
+    // KURAL 2 — Gol kısırlığı (max 40): maç başı toplam gol ortalaması
+    let avgA = A.reduce((s,x)=>s+x.gf+x.ga,0)/A.length, avgB = B.reduce((s,x)=>s+x.gf+x.ga,0)/B.length;
+    let r2 = (avgA<=2.0 && avgB<=2.0) ? 40 : ((avgA<=2.5 && avgB<=2.5) ? 20 : 0);
+    // KURAL 3 — Rölanti ve direnç (max 60)
+    let lowDraw = a => a.filter(x=>(x.gf===0&&x.ga===0)||(x.gf===1&&x.ga===1)).length/a.length;   // 0-0 / 1-1 ağırlığı
+    let r3a = (lowDraw(A)>=0.40 && lowDraw(B)>=0.40) ? 40 : 0;
+    let oneGoal = a => { let nd=a.filter(x=>x.gf!==x.ga); return nd.length ? nd.filter(x=>Math.abs(x.gf-x.ga)===1).length/nd.length : 0; }; // tek gol farkı direnç
+    let r3b = (oneGoal(A)>=0.50 && oneGoal(B)>=0.50) ? 20 : 0;
+    let score = r2 + r3a + r3b;
+    return {ok:true, dq:false, score,
+        detail:`kısır ort ${avgA.toFixed(1)}/${avgB.toFixed(1)} → +${r2}; direnç (0-0/1-1)+${r3a}, (tek fark)+${r3b}`};
+}
+// Geçmiş (oynanmış) maçlarda: 70+ puan alan maçların gerçekte kaçı X bitmiş?
+function drawBacktest(){
+    let played=0, X=0, pass=0, passX=0;
+    rounds.forEach(r=>r.matches.forEach(m=>{
+        if(!m.res) return; played++; if(m.res==='X') X++;
+        let d=drawScore(m.home,m.away);
+        if(d.ok && d.score>=70){ pass++; if(m.res==='X') passX++; }
+    }));
+    return {played, X, base:played?X/played:0, pass, passX, rate:pass?passX/pass:0};
+}
+
 function render(){
     if(!rounds.length){ document.getElementById('out').innerHTML=''; document.getElementById('stats').innerText='Önce bülteni yapıştır + DÜZENLE.'; return; }
-    let fr=document.getElementById('f_round').value, fres=document.getElementById('f_res').value;
+    let fr=document.getElementById('f_round').value, fres=document.getElementById('f_res').value, fdraw=document.getElementById('f_draw').value;
     let o1=[num('o1min',0),num('o1max',999)], oX=[num('oXmin',0),num('oXmax',999)], o2=[num('o2min',0),num('o2max',999)];
-    // filtre aktif mi? (sonuç seçili ya da bir oran aralığı girilmiş)
+    // filtre aktif mi? (sonuç seçili ya da bir oran aralığı girilmiş ya da beraberlik filtresi)
     let oddsActive = o1[0]>0||o1[1]<999||oX[0]>0||oX[1]<999||o2[0]>0||o2[1]<999;
-    let filterActive = (fres!=='ALL') || oddsActive;
+    let filterActive = (fres!=='ALL') || oddsActive || (fdraw!=='ALL');
     let html='', exp=['EV_TAKIM | DEP_TAKIM | SONUC | EV_S5_PUAN | EV_S5_ATTIGI | EV_S5_YEDIGI | DEP_S5_PUAN | DEP_S5_ATTIGI | DEP_S5_YEDIGI'], hlCount=0, shown=0;
 
     rounds.forEach(r=>{
@@ -128,20 +163,33 @@ function render(){
             // filtreye uyuyor mu? (gizlemiyoruz, vurguluyoruz)
             let resOk = (fres==='ALL') ? true : (fres==='PEND' ? !m.res : m.res===fres);
             let oddOk = m.o[0]>=o1[0]&&m.o[0]<=o1[1]&&m.o[1]>=oX[0]&&m.o[1]<=oX[1]&&m.o[2]>=o2[0]&&m.o[2]<=o2[1];
-            let hlRow = filterActive && resOk && oddOk;
+            let ds = drawScore(m.home, m.away);
+            let drawOk = (fdraw==='ALL') ? true : (ds.ok && ds.score>=70);
+            let hlRow = filterActive && resOk && oddOk && drawOk;
             if(hlRow) hlCount++;
             if(hlRow || !filterActive){ let h5=last5(m.home), a5=last5(m.away);
                 exp.push(`${m.home} | ${m.away} | ${m.res||'-'} | ${h5.pts} | ${h5.gf} | ${h5.ga} | ${a5.pts} | ${a5.gf} | ${a5.ga}`); }
             let hp=pts(m.home), ap=pts(m.away);
             let ptsHtml = `<div class="pts">${m.home}: <b>T${hp.t}</b> · 5:${hp.s5} · 10:${hp.s10} &nbsp;|&nbsp; ${m.away}: <b>T${ap.t}</b> · 5:${ap.s5} · 10:${ap.s10}</div>`;
-            rows += `<tr${hlRow?' class="row-hl"':''}><td class="match">${m.home} - ${m.away}${ptsHtml}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
+            // Beraberlik puanı rozeti + (oynanmışsa) gerçekleşen sonuç işareti
+            let rc = (ds.ok && m.res) ? `<span class="rc">${m.res==='X'?'✓ X':'✗ '+m.res}</span>` : '';
+            let dsHtml = ds.dq
+                ? `<span class="dsb dq">⛔ Diskalifiye</span><span class="dsdetail">${ds.detail}</span>`
+                : (ds.ok
+                    ? `<span class="dsb${ds.score>=70?' hot':''}">🎯 Beraberlik: ${ds.score}/100${rc}</span><span class="dsdetail">${ds.detail}</span>`
+                    : `<span class="dsb">— ${ds.detail}</span>`);
+            rows += `<tr${hlRow?' class="row-hl"':''}><td class="match">${m.home} - ${m.away}${ptsHtml}${dsHtml}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
         });
         if(rows) html += `<div class="round"><div class="round-head"><span>${r.no}. Round</span></div>
             <table><thead><tr><th>Maç</th><th>Skor</th><th>1</th><th>X</th><th>2</th><th>Tarih</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     });
-    document.getElementById('stats').innerText = filterActive
+    let bt = drawBacktest();
+    let btTxt = bt.pass
+        ? `  •  📉 GEÇMİŞ TESTİ: 70+ puan alan ${bt.pass} maçın %${(100*bt.rate).toFixed(0)}'ı (${bt.passX}/${bt.pass}) gerçekten X bitmiş — taban X oranı %${(100*bt.base).toFixed(0)}`
+        : `  •  📉 GEÇMİŞ TESTİ: 70+ puanı geçen oynanmış maç yok`;
+    document.getElementById('stats').innerText = (filterActive
         ? `🟢 Vurgulanan: ${hlCount} maç  •  (toplam ${shown} maç listede)`
-        : `Toplam ${shown} maç listede`;
+        : `Toplam ${shown} maç listede`) + btTxt;
     document.getElementById('out').innerHTML = html || '<div style="color:var(--muted);padding:14px;">Filtreye uyan maç yok.</div>';
     exportText = exp.join('\n');
 }
