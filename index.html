@@ -38,6 +38,7 @@
     .dsb.dq{background:#fef2f2;color:#b91c1c;border-color:#fecaca;}
     .dsb .rc{margin-left:5px;font-weight:800;}
     .dsdetail{display:block;font-size:9px;color:var(--muted);margin-top:2px;font-weight:400;}
+    .rtag{display:inline-block;font-size:9px;font-weight:600;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:0 4px;vertical-align:middle;}
     td.score{font-family:'SF Mono','Consolas',monospace;font-weight:700;color:var(--gold);width:48px;}
     td.date{color:var(--muted);font-size:11px;width:60px;}
     td.od{font-family:'SF Mono','Consolas',monospace;width:66px;}
@@ -56,8 +57,8 @@
 <body>
 <div class="wrap">
     <h2 class="title">⚽ BÜLTEN FİLTRE</h2>
-    <h4>Bülteni buraya yapıştır:</h4>
-    <textarea id="raw" placeholder="38. Round ... Villarreal - Atl. Madrid  5:1  2.54  3.84  2.55  24.05. ..."></textarea>
+    <h4>Bültenleri buraya yapıştır (birden çok lig alt alta olabilir — maçlar tarihe göre birleştirilir):</h4>
+    <textarea id="raw" placeholder="La Liga, Serie A, Premier Lig... hepsini alt alta yapıştır. Örn: 38. Round ... Villarreal - Atl. Madrid  5:1  2.54  3.84  2.55  24.05. ..."></textarea>
     <button onclick="düzenle()">📊 DÜZENLE</button>
 
     <div class="fbox">
@@ -162,6 +163,9 @@ function drawBacktest(){
     return {played, X, base:played?X/played:0, pass, passX, rate:pass?passX/pass:0};
 }
 
+// Tarih anahtarı: "DD.MM." → sıralanabilir sayı (sezon: Ağu→May, yani 7-12. aylar önce)
+function dateKey(d){ let m=(d||'').match(/(\d{1,2})\.(\d{1,2})/); if(!m) return 1e9; let day=+m[1], mon=+m[2]; return (mon>=7?mon:mon+12)*100+day; }
+
 function render(){
     if(!rounds.length){ document.getElementById('out').innerHTML=''; document.getElementById('stats').innerText='Önce bülteni yapıştır + DÜZENLE.'; return; }
     let fr=document.getElementById('f_round').value, fres=document.getElementById('f_res').value, fdraw=document.getElementById('f_draw').value;
@@ -176,42 +180,45 @@ function render(){
     let filterActive = (fres!=='ALL') || oddsActive || (fdraw!=='ALL');
     let html='', exp=['EV_TAKIM | DEP_TAKIM | SONUC | EV_S5_PUAN | EV_S5_ATTIGI | EV_S5_YEDIGI | DEP_S5_PUAN | DEP_S5_ATTIGI | DEP_S5_YEDIGI'], hlCount=0, shown=0, disp=0;
 
-    rounds.forEach(r=>{
-        if(fr!=='ALL' && r.no!==fr) return;   // round yine filtreler (hepsi = tümü)
-        let rows='';
-        r.matches.forEach(m=>{
-            shown++;
-            // vurgulanacak oran: sonuç (skordan); yoksa favori (en düşük)
-            let hi = m.res ? ({'1':0,'X':1,'2':2})[m.res] : m.o.indexOf(Math.min(...m.o));
-            let od = m.o.map((v,i)=>`<td class="od${i===hi?' hl':''}">${v.toFixed(2)}</td>`).join('');
-            // filtreye uyuyor mu? (gizlemiyoruz, vurguluyoruz)
-            let resOk = (fres==='ALL') ? true : (fres==='PEND' ? !m.res : m.res===fres);
-            let oddOk = m.o[0]>=o1[0]&&m.o[0]<=o1[1]&&m.o[1]>=oX[0]&&m.o[1]<=oX[1]&&m.o[2]>=o2[0]&&m.o[2]<=o2[1];
-            let dw = drawWarn(m);
-            let drawOk = (fdraw==='ALL') ? true : (dw.ok && dw.warn);
-            let hlRow = filterActive && resOk && oddOk && drawOk;
-            if(hlRow) hlCount++;
-            if(hlRow || !filterActive){ let h5=last5(m.home), a5=last5(m.away);
-                exp.push(`${m.home} | ${m.away} | ${m.res||'-'} | ${h5.pts} | ${h5.gf} | ${h5.ga} | ${a5.pts} | ${a5.gf} | ${a5.ga}`); }
-            // "sadece seçilenleri göster" açıksa ve filtre aktifse, uymayan satırı gizle
-            if(fOnly && filterActive && !hlRow) return;
-            disp++;
-            let hp=pts(m.home), ap=pts(m.away);
-            let ptsHtml = `<div class="pts">${m.home}: <b>T${hp.t}</b> · 5:${hp.s5} · 10:${hp.s10} &nbsp;|&nbsp; ${m.away}: <b>T${ap.t}</b> · 5:${ap.s5} · 10:${ap.s10}</div>`;
-            // Beraberlik uyarısı rozeti + (oynanmışsa) gerçekleşen sonuç işareti
-            let rc = (dw.ok && m.res) ? `<span class="rc">${m.res==='X'?'✓ X':'✗ '+m.res}</span>` : '';
-            let dsHtml = dw.warn
-                ? `<span class="dsb hot">⚠️ Beraberlik Uyarısı${rc}</span><span class="dsdetail">${dw.detail}</span>`
-                : (dw.ok
-                    ? `<span class="dsb">Uyarı yok${rc}</span><span class="dsdetail">${dw.detail}</span>`
-                    : `<span class="dsb">— ${dw.detail}</span>`);
-            // satır rengi: kazananlar açık + uyarı verilmiş + oynanmış → berabereyse yeşil, değilse kırmızı; yoksa filtre vurgusu
-            let cls = (fwin && dw.warn && m.res) ? (m.res==='X' ? 'row-win' : 'row-loss') : (hlRow ? 'row-hl' : '');
-            rows += `<tr${cls?` class="${cls}"`:''}><td class="match">${m.home} - ${m.away}${ptsHtml}${dsHtml}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
-        });
-        if(rows) html += `<div class="round"><div class="round-head"><span>${r.no}. Round</span></div>
-            <table><thead><tr><th>Maç</th><th>Skor</th><th>1</th><th>X</th><th>2</th><th>Tarih</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    // Tüm liglerin maçlarını birleştir → tarihe göre sırala → tarihe göre grupla
+    let all=[];
+    rounds.forEach(r=>{ if(fr!=='ALL' && r.no!==fr) return; r.matches.forEach(m=>all.push({m, rno:r.no})); });
+    all.sort((a,b)=>dateKey(a.m.date)-dateKey(b.m.date) || a.m.home.localeCompare(b.m.home));
+    let blocks=[], cur=null;
+    all.forEach(({m,rno})=>{
+        shown++;
+        // vurgulanacak oran: sonuç (skordan); yoksa favori (en düşük)
+        let hi = m.res ? ({'1':0,'X':1,'2':2})[m.res] : m.o.indexOf(Math.min(...m.o));
+        let od = m.o.map((v,i)=>`<td class="od${i===hi?' hl':''}">${v.toFixed(2)}</td>`).join('');
+        // filtreye uyuyor mu?
+        let resOk = (fres==='ALL') ? true : (fres==='PEND' ? !m.res : m.res===fres);
+        let oddOk = m.o[0]>=o1[0]&&m.o[0]<=o1[1]&&m.o[1]>=oX[0]&&m.o[1]<=oX[1]&&m.o[2]>=o2[0]&&m.o[2]<=o2[1];
+        let dw = drawWarn(m);
+        let drawOk = (fdraw==='ALL') ? true : (dw.ok && dw.warn);
+        let hlRow = filterActive && resOk && oddOk && drawOk;
+        if(hlRow) hlCount++;
+        if(hlRow || !filterActive){ let h5=last5(m.home), a5=last5(m.away);
+            exp.push(`${m.home} | ${m.away} | ${m.res||'-'} | ${h5.pts} | ${h5.gf} | ${h5.ga} | ${a5.pts} | ${a5.gf} | ${a5.ga}`); }
+        // "sadece seçilenleri göster" açıksa ve filtre aktifse, uymayan satırı gizle
+        if(fOnly && filterActive && !hlRow) return;
+        disp++;
+        let hp=pts(m.home), ap=pts(m.away);
+        let ptsHtml = `<div class="pts">${m.home}: <b>T${hp.t}</b> · 5:${hp.s5} · 10:${hp.s10} &nbsp;|&nbsp; ${m.away}: <b>T${ap.t}</b> · 5:${ap.s5} · 10:${ap.s10}</div>`;
+        // Beraberlik uyarısı rozeti + (oynanmışsa) gerçekleşen sonuç işareti
+        let rc = (dw.ok && m.res) ? `<span class="rc">${m.res==='X'?'✓ X':'✗ '+m.res}</span>` : '';
+        let dsHtml = dw.warn
+            ? `<span class="dsb hot">⚠️ Beraberlik Uyarısı${rc}</span><span class="dsdetail">${dw.detail}</span>`
+            : (dw.ok
+                ? `<span class="dsb">Uyarı yok${rc}</span><span class="dsdetail">${dw.detail}</span>`
+                : `<span class="dsb">— ${dw.detail}</span>`);
+        // satır rengi: kazananlar açık + uyarı verilmiş + oynanmış → berabereyse yeşil, değilse kırmızı; yoksa filtre vurgusu
+        let cls = (fwin && dw.warn && m.res) ? (m.res==='X' ? 'row-win' : 'row-loss') : (hlRow ? 'row-hl' : '');
+        let tr = `<tr${cls?` class="${cls}"`:''}><td class="match">${m.home} - ${m.away} <span class="rtag">R${rno}</span>${ptsHtml}${dsHtml}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
+        if(!cur || cur.date!==m.date){ cur={date:m.date||'Tarihsiz', rows:''}; blocks.push(cur); }
+        cur.rows += tr;
     });
+    blocks.forEach(b=>{ if(b.rows) html += `<div class="round"><div class="round-head"><span>📅 ${b.date}</span></div>
+        <table><thead><tr><th>Maç</th><th>Skor</th><th>1</th><th>X</th><th>2</th><th>Tarih</th></tr></thead><tbody>${b.rows}</tbody></table></div>`; });
     let bt = drawBacktest();
     let btTxt = bt.pass
         ? `  •  📉 GEÇMİŞ TESTİ: uyarı çıkan ${bt.pass} maçın %${(100*bt.rate).toFixed(0)}'ı (${bt.passX}/${bt.pass}) gerçekten X bitmiş — taban X oranı %${(100*bt.base).toFixed(0)}`
