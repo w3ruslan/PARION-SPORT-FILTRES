@@ -57,7 +57,7 @@
 <body>
 <div class="wrap">
     <h2 class="title">⚽ BÜLTEN FİLTRE</h2>
-    <h4>Bültenleri buraya yapıştır (birden çok lig alt alta olabilir — maçlar tarihe göre birleştirilir):</h4>
+    <h4>Bülteni buraya yapıştır (maçlar round numarasına göre sıralanır: 1. Round, 2. Round ...):</h4>
     <textarea id="raw" placeholder="La Liga, Serie A, Premier Lig... hepsini alt alta yapıştır. Örn: 38. Round ... Villarreal - Atl. Madrid  5:1  2.54  3.84  2.55  24.05. ..."></textarea>
     <button onclick="düzenle()">📊 DÜZENLE</button>
 
@@ -180,10 +180,10 @@ function render(){
     let filterActive = (fres!=='ALL') || oddsActive || (fdraw!=='ALL');
     let html='', exp=['EV_TAKIM | DEP_TAKIM | SONUC | EV_S5_PUAN | EV_S5_ATTIGI | EV_S5_YEDIGI | DEP_S5_PUAN | DEP_S5_ATTIGI | DEP_S5_YEDIGI'], hlCount=0, shown=0, disp=0;
 
-    // Tüm liglerin maçlarını birleştir → tarihe göre sırala → tarihe göre grupla
+    // Tüm maçları birleştir → round numarasına göre sırala (1,2,3...) → round'a göre grupla
     let all=[];
     rounds.forEach(r=>{ if(fr!=='ALL' && r.no!==fr) return; r.matches.forEach(m=>all.push({m, rno:r.no})); });
-    all.sort((a,b)=>dateKey(a.m.date)-dateKey(b.m.date) || a.m.home.localeCompare(b.m.home));
+    all.sort((a,b)=>(parseInt(a.rno)||9999)-(parseInt(b.rno)||9999) || dateKey(a.m.date)-dateKey(b.m.date));
     let blocks=[], cur=null;
     all.forEach(({m,rno})=>{
         shown++;
@@ -213,11 +213,11 @@ function render(){
                 : `<span class="dsb">— ${dw.detail}</span>`);
         // satır rengi: kazananlar açık + uyarı verilmiş + oynanmış → berabereyse yeşil, değilse kırmızı; yoksa filtre vurgusu
         let cls = (fwin && dw.warn && m.res) ? (m.res==='X' ? 'row-win' : 'row-loss') : (hlRow ? 'row-hl' : '');
-        let tr = `<tr${cls?` class="${cls}"`:''}><td class="match">${m.home} - ${m.away} <span class="rtag">R${rno}</span>${ptsHtml}${dsHtml}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
-        if(!cur || cur.date!==m.date){ cur={date:m.date||'Tarihsiz', rows:''}; blocks.push(cur); }
+        let tr = `<tr${cls?` class="${cls}"`:''}><td class="match">${m.home} - ${m.away}${ptsHtml}${dsHtml}</td><td class="score">${m.score||'?'}</td>${od}<td class="date">${m.date}</td></tr>`;
+        if(!cur || cur.rno!==rno){ cur={rno, rows:''}; blocks.push(cur); }
         cur.rows += tr;
     });
-    blocks.forEach(b=>{ if(b.rows) html += `<div class="round"><div class="round-head"><span>📅 ${b.date}</span></div>
+    blocks.forEach(b=>{ if(b.rows) html += `<div class="round"><div class="round-head"><span>${b.rno}. Round</span></div>
         <table><thead><tr><th>Maç</th><th>Skor</th><th>1</th><th>X</th><th>2</th><th>Tarih</th></tr></thead><tbody>${b.rows}</tbody></table></div>`; });
     let bt = drawBacktest();
     let btTxt = bt.pass
