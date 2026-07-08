@@ -39,6 +39,10 @@
     .dsb .rc{margin-left:5px;font-weight:800;}
     .dsdetail{display:block;font-size:9px;color:var(--muted);margin-top:2px;font-weight:400;}
     .rtag{display:inline-block;font-size:9px;font-weight:600;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:0 4px;vertical-align:middle;}
+    .fixinput{background:#eef4ff;border:2px solid var(--primary);border-radius:10px;padding:12px;margin-top:14px;}
+    .fixinput h4{color:var(--primary2);}
+    .fixwrap{border:2px solid var(--primary);border-radius:12px;padding:12px;margin:14px 0;background:#f5f8ff;}
+    .fixtitle{font-weight:700;color:var(--primary2);margin-bottom:8px;font-size:14px;text-align:center;}
     td.score{font-family:'SF Mono','Consolas',monospace;font-weight:700;color:var(--gold);width:48px;}
     td.date{color:var(--muted);font-size:11px;width:60px;}
     td.od{font-family:'SF Mono','Consolas',monospace;width:66px;}
@@ -61,6 +65,11 @@
     <textarea id="raw" placeholder="La Liga, Serie A, Premier Lig... hepsini alt alta yapıştır. Örn: 38. Round ... Villarreal - Atl. Madrid  5:1  2.54  3.84  2.55  24.05. ..."></textarea>
     <button onclick="düzenle()">📊 DÜZENLE</button>
 
+    <div class="fixinput">
+        <h4>📋 FİKSTÜR (gelecek maçlar) — ayrı yapıştır:</h4>
+        <textarea id="fixture" placeholder="1. Round&#10;21.08. 21:45  Marseille - Strasbourg  5  1.63  4.29  4.49&#10;22.08. 18:15  Lens - Auxerre  6  1.59  4.18  5.05 ..."></textarea>
+    </div>
+
     <div class="fbox">
         <div class="frow">
             <div class="fg"><label>Round (hafta)</label><select id="f_round" onchange="render()"><option value="ALL">HEPSİ</option></select></div>
@@ -79,11 +88,12 @@
 
     <button class="copy" onclick="kopyala()">📋 SONUCU KOPYALA</button>
     <div id="stats"></div>
+    <div id="fixout"></div>
     <div id="out"></div>
 </div>
 
 <script>
-let rounds = [], exportText = "", teamHist = {}, streakInfo = new Map();
+let rounds = [], exportText = "", teamHist = {}, streakInfo = new Map(), fixtureMatches = [];
 const roundRe = /^(\d+)\.\s*Round/i;
 const mRe = /^(.+?)\s+-\s+(.+?)\s+(?:(\d+):(\d+)\s+)?(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)(?:\s+([\d.]+))?\s*$/;
 
@@ -114,6 +124,7 @@ function düzenle(){
         (teamHist[m.away]=teamHist[m.away]||[]).push({p:ap, gf:m.ag, ga:m.hg});
     }));
     streakInfo = computeStreaks();
+    fixtureMatches = parseFixture();
 
     let sel = document.getElementById('f_round'); sel.innerHTML = '<option value="ALL">HEPSİ</option>';
     rounds.forEach(r=>{ let o=document.createElement('option'); o.value=r.no; o.textContent='Round '+r.no+' ('+r.matches.length+')'; sel.appendChild(o); });
@@ -165,6 +176,50 @@ function drawBacktest(){
 
 // Tarih anahtarı: "DD.MM." → sıralanabilir sayı (sezon: Ağu→May, yani 7-12. aylar önce)
 function dateKey(d){ let m=(d||'').match(/(\d{1,2})\.(\d{1,2})/); if(!m) return 1e9; let day=+m[1], mon=+m[2]; return (mon>=7?mon:mon+12)*100+day; }
+
+// === FİKSTÜR (gelecek maçlar) — format: "TARİH SAAT \t Ev - Dep \t \t B's \t 1 \t X \t 2" (skor yok) ===
+function parseFixture(){
+    let lines = document.getElementById('fixture').value.split(/\r?\n/);
+    let out=[], curRound='?', lastDate='';
+    lines.forEach(raw=>{
+        let line=raw.replace(/\s+$/,''), t=line.trim(); if(!t) return;
+        let rm=t.match(/^(\d+)\.\s*Round/i);
+        if(rm){ curRound=rm[1]; lastDate=''; return; }
+        let parts=line.split('\t').map(s=>s.trim());
+        let mi=parts.findIndex(p=>/ - /.test(p)); if(mi<0) return;
+        let mm=parts[mi].split(/\s+-\s+/); if(mm.length<2) return;
+        let dt=parts.slice(0,mi).filter(Boolean).join(' ');
+        let dm=dt.match(/(\d{1,2}\.\d{1,2}\.?)/);
+        let date=dm?dm[1]:lastDate; if(dm) lastDate=date;
+        let odds=parts.slice(mi+1).filter(p=>/^\d+\.\d+$/.test(p)).map(parseFloat);
+        out.push({round:curRound, date, home:mm[0].trim(), away:mm[1].trim(), o:odds.length>=3?odds.slice(0,3):null});
+    });
+    return out;
+}
+// Bir takımın ŞU ANKİ üst üste berabere-kalmama serisi (teamHist yeni→eski)
+function teamCurrentStreak(team){ let a=teamHist[team]||[], s=0; for(let x of a){ if(x.gf===x.ga) break; s++; } return s; }
+function renderFixture(){
+    let box=document.getElementById('fixout');
+    if(!fixtureMatches.length){ box.innerHTML=''; return; }
+    let byR={}, order=[];
+    fixtureMatches.forEach(m=>{ if(!byR[m.round]){byR[m.round]=[];order.push(m.round);} byR[m.round].push(m); });
+    order.sort((a,b)=>(parseInt(b)||-1)-(parseInt(a)||-1));
+    let html='';
+    order.forEach(rno=>{
+        let rows='';
+        byR[rno].forEach(m=>{
+            let sh=teamCurrentStreak(m.home), sa=teamCurrentStreak(m.away);
+            let warn=inWin(sh)||inWin(sa);
+            let tag=s=>inWin(s)?`<b>${s}</b>✓`:s;
+            let od=m.o?m.o.map((v,i)=>`<td class="od${i===1&&warn?' hl':''}">${v.toFixed(2)}</td>`).join(''):'<td class="od">—</td><td class="od">—</td><td class="od">—</td>';
+            let badge=warn?`<span class="dsb hot">⚠️ Beraberlik Uyarısı</span>`:`<span class="dsb">Uyarı yok</span>`;
+            let detail=`<span class="dsdetail">${m.home}: ${tag(sh)} maçtır berabere yok · ${m.away}: ${tag(sa)} maçtır berabere yok</span>`;
+            rows+=`<tr${warn?' class="row-hl"':''}><td class="date">${m.date}</td><td class="match">${m.home} - ${m.away}${badge}${detail}</td>${od}</tr>`;
+        });
+        html+=`<div class="round"><div class="round-head"><span>${rno}. Round</span></div><table><thead><tr><th>Tarih</th><th>Maç</th><th>1</th><th>X</th><th>2</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    });
+    box.innerHTML=`<div class="fixwrap"><div class="fixtitle">📋 FİKSTÜR — Gelecek Maçlar (geçmiş forma göre beraberlik analizi)</div>${html}</div>`;
+}
 
 function render(){
     if(!rounds.length){ document.getElementById('out').innerHTML=''; document.getElementById('stats').innerText='Önce bülteni yapıştır + DÜZENLE.'; return; }
@@ -228,6 +283,7 @@ function render(){
         : `Toplam ${shown} maç listede`) + btTxt;
     document.getElementById('out').innerHTML = html || '<div style="color:var(--muted);padding:14px;">Filtreye uyan maç yok.</div>';
     exportText = exp.join('\n');
+    renderFixture();
 }
 
 function kopyala(){
